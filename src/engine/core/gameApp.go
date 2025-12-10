@@ -14,11 +14,15 @@ type GameApp struct {
 	sdlRenderer *sdl.Renderer
 	// 是否运行中
 	isRunning bool
+	// 帧率管理器
+	fpsManager *FPS
 }
 
 // 创建游戏应用
 func NewGameApp() *GameApp {
-	return &GameApp{}
+	return &GameApp{
+		fpsManager: NewFPS(),
+	}
 }
 
 // 销毁游戏应用
@@ -77,8 +81,11 @@ func (g *GameApp) Run() {
 		return
 	}
 
+	g.fpsManager.SetTargetFps(60)
 	for g.isRunning {
-		deltaTime := float32(0.01)
+		g.fpsManager.Update()
+		deltaTime := g.fpsManager.GetDeltaTime()
+		// fmt.Printf("dt: %f\n", 1.0/deltaTime)
 		g.handleEvents()
 		g.update(deltaTime)
 		g.render()
@@ -99,7 +106,7 @@ func (g *GameApp) handleEvents() {
 }
 
 // 更新
-func (g *GameApp) update(deltaTime float32) {
+func (g *GameApp) update(deltaTime float64) {
 }
 
 // 渲染
