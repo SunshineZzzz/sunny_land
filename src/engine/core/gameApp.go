@@ -3,6 +3,8 @@ package core
 import (
 	"log/slog"
 
+	"sunny_land/src/engine/resource"
+
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
 )
 
@@ -16,6 +18,8 @@ type GameApp struct {
 	isRunning bool
 	// 帧率管理器
 	fpsManager *FPS
+	// 资源管理器
+	resourceManager *resource.ResourceManager
 }
 
 // 创建游戏应用
@@ -27,9 +31,14 @@ func NewGameApp() *GameApp {
 
 // 销毁游戏应用
 func (g *GameApp) Destroy() {
-	slog.Debug("game app destroy")
 	if g.isRunning {
 		slog.Warn("game app is running, destroy")
+	}
+
+	// 清理资源管理器
+	if g.resourceManager != nil {
+		g.resourceManager.Clear()
+		g.resourceManager = nil
 	}
 
 	// 清理SDL资源
@@ -42,12 +51,31 @@ func (g *GameApp) Destroy() {
 		g.sdlWindow = nil
 	}
 	sdl.Quit()
+
+	slog.Debug("game app destroy")
 }
 
 // 初始化
 func (g *GameApp) init() bool {
-	slog.Debug("game app init")
+	if !g.initSDL() {
+		return false
+	}
 
+	if !g.initTimer() {
+		return false
+	}
+
+	if !g.initResourceManager() {
+		return false
+	}
+
+	slog.Debug("game app init")
+	g.isRunning = true
+	return true
+}
+
+// 初始化SDL
+func (g *GameApp) initSDL() bool {
 	// 初始化 SDL
 	if !sdl.Init(sdl.InitVideo | sdl.InitAudio | sdl.InitEvents) {
 		slog.Error("sdl init error", slog.String("error", sdl.GetError()))
@@ -70,7 +98,21 @@ func (g *GameApp) init() bool {
 		return false
 	}
 
-	g.isRunning = true
+	slog.Debug("sdl init success")
+	return true
+}
+
+// 初始化timer
+func (g *GameApp) initTimer() bool {
+	g.fpsManager.SetTargetFps(144)
+	slog.Debug("fps manager init success")
+	return true
+}
+
+// 初始化资源管理器
+func (g *GameApp) initResourceManager() bool {
+	g.resourceManager = resource.NewResourceManager(g.sdlRenderer)
+	slog.Debug("resource manager init success")
 	return true
 }
 
@@ -81,7 +123,9 @@ func (g *GameApp) Run() {
 		return
 	}
 
-	g.fpsManager.SetTargetFps(60)
+	// 测试资源管理器
+	g.testResourceManager()
+
 	for g.isRunning {
 		g.fpsManager.Update()
 		deltaTime := g.fpsManager.GetDeltaTime()
@@ -111,4 +155,15 @@ func (g *GameApp) update(deltaTime float64) {
 
 // 渲染
 func (g *GameApp) render() {
+}
+
+// 测试资源管理器
+func (g *GameApp) testResourceManager() {
+	g.resourceManager.GetTexture("assets/textures/Actors/eagle-attack.png")
+	g.resourceManager.GetFont("assets/fonts/VonwaonBitmap-16px.ttf", 16)
+	g.resourceManager.GetSound("assets/audio/button_click.wav")
+
+	g.resourceManager.UnloadTexture("assets/textures/Actors/eagle-attack.png")
+	g.resourceManager.UnloadFont("assets/fonts/VonwaonBitmap-16px.ttf", 16)
+	g.resourceManager.UnloadSound("assets/audio/button_click.wav")
 }

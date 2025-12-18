@@ -133,79 +133,95 @@ func NewAudioManager() *audioManager {
 }
 
 // 清理
-func (am *audioManager) Clean() {
+func (am *audioManager) Clear() {
 	for _, sounds := range am.sounds {
 		for _, sound := range *sounds {
 			sound.Close()
 		}
 	}
+	am.sounds = make(map[string]*[]IAudio)
+
 	for _, musics := range am.musics {
 		for _, music := range *musics {
 			music.Close()
 		}
 	}
-	slog.Debug("Clean AudioManager")
+	am.musics = make(map[string]*[]IAudio)
+
+	slog.Debug("audio manager clear")
 }
 
 // 加载音效
-func (am *audioManager) loadSound(filePath string) error {
+func (am *audioManager) loadSound(filePath string) *[]IAudio {
 	audio, err := newAudio(filePath, AudioTypeEffect)
 	if err != nil {
-		return fmt.Errorf("load sound error,%s", err.Error())
+		slog.Error("load sound error", slog.String("path", filePath), slog.String("error", err.Error()))
+		return nil
 	}
 	if _, ok := am.sounds[filePath]; !ok {
 		am.sounds[filePath] = new([]IAudio)
 	}
 	*am.sounds[filePath] = append(*am.sounds[filePath], audio)
-	return nil
+	return am.sounds[filePath]
 }
 
 // 获取音效
-func (am *audioManager) GetSound(filePath string) (*[]IAudio, error) {
+func (am *audioManager) GetSound(filePath string) *[]IAudio {
 	sound, ok := am.sounds[filePath]
 	if ok {
-		return sound, nil
+		return sound
 	}
-	err := am.loadSound(filePath)
-	if err != nil {
-		return nil, err
-	}
-	return am.sounds[filePath], nil
+	slog.Debug("sound not in cache, try to load", slog.String("path", filePath))
+	return am.loadSound(filePath)
 }
 
-// 卸载音频
-func (am *audioManager) UnregisterSound(filePath string) {
+// 卸载音效
+func (am *audioManager) UnloadSound(filePath string) {
+	if _, ok := am.sounds[filePath]; !ok {
+		slog.Warn("sound not in cache, can not unload", slog.String("path", filePath))
+		return
+	}
+	for _, sound := range *am.sounds[filePath] {
+		sound.Close()
+	}
+	slog.Debug("unload sound", slog.String("path", filePath))
 	delete(am.sounds, filePath)
 }
 
 // 加载音乐
-func (am *audioManager) loadMusic(filePath string) error {
+func (am *audioManager) loadMusic(filePath string) *[]IAudio {
 	audio, err := newAudio(filePath, AudioTypeMusic)
 	if err != nil {
-		return fmt.Errorf("load music error,%s", err.Error())
+		slog.Error("load music error", slog.String("path", filePath), slog.String("error", err.Error()))
+		return nil
 	}
 	if _, ok := am.musics[filePath]; !ok {
 		am.musics[filePath] = new([]IAudio)
 	}
 	*am.musics[filePath] = append(*am.musics[filePath], audio)
-	return nil
+	return am.musics[filePath]
 }
 
 // 获取音乐
-func (am *audioManager) GetMusic(filePath string) (*[]IAudio, error) {
+func (am *audioManager) GetMusic(filePath string) *[]IAudio {
 	music, ok := am.musics[filePath]
 	if ok {
-		return music, nil
+		return music
 	}
-	err := am.loadMusic(filePath)
-	if err != nil {
-		return nil, err
-	}
-	return am.musics[filePath], nil
+	slog.Debug("music not in cache, try to load", slog.String("path", filePath))
+	return am.loadMusic(filePath)
 }
 
 // 卸载音乐
-func (am *audioManager) UnregisterMusic(filePath string) {
+func (am *audioManager) UnloadMusic(filePath string) {
+	if _, ok := am.musics[filePath]; !ok {
+		slog.Warn("music not in cache, can not unload", slog.String("path", filePath))
+		return
+	}
+	for _, music := range *am.musics[filePath] {
+		music.Close()
+	}
+	slog.Debug("unload music", slog.String("path", filePath))
 	delete(am.musics, filePath)
 }
 
@@ -367,6 +383,7 @@ func (o *oggAudio) Pause() {
 	if o.stream == nil || o.id == 0 {
 		return
 	}
+
 	o.isPlaying = false
 	sdl.PauseAudioStreamDevice(o.stream)
 }
@@ -379,6 +396,7 @@ func (o *oggAudio) Resume() {
 	if o.stream == nil || o.id == 0 {
 		return
 	}
+
 	o.isPlaying = true
 	sdl.ResumeAudioStreamDevice(o.stream)
 }
@@ -391,6 +409,7 @@ func (o *oggAudio) Stop() {
 	if o.stream == nil || o.id == 0 {
 		return
 	}
+
 	o.isPlaying = false
 	o.dataPos = 0
 	sdl.PauseAudioStreamDevice(o.stream)
@@ -410,11 +429,19 @@ func (o *oggAudio) Close() {
 	o.Lock()
 	defer o.Unlock()
 
+	if o.stream == nil || o.id == 0 {
+		return
+	}
+
 	if o.stream != nil {
-		o.Stop()
+		o.isPlaying = false
+		o.dataPos = 0
+		sdl.PauseAudioStreamDevice(o.stream)
+		sdl.ClearAudioStream(o.stream)
 		sdl.DestroyAudioStream(o.stream)
 		o.stream = nil
 	}
+
 	unregisterAudio(o.id)
 }
 
@@ -579,6 +606,7 @@ func (w *wavAudio) Pause() {
 	if w.stream == nil || w.id == 0 {
 		return
 	}
+
 	w.isPlaying = false
 	sdl.PauseAudioStreamDevice(w.stream)
 }
@@ -591,6 +619,7 @@ func (w *wavAudio) Resume() {
 	if w.stream == nil || w.id == 0 {
 		return
 	}
+
 	w.isPlaying = true
 	sdl.ResumeAudioStreamDevice(w.stream)
 }
@@ -603,6 +632,7 @@ func (w *wavAudio) Stop() {
 	if w.stream == nil || w.id == 0 {
 		return
 	}
+
 	w.isPlaying = false
 	w.dataPos = 0
 	sdl.PauseAudioStreamDevice(w.stream)
@@ -622,16 +652,25 @@ func (w *wavAudio) Close() {
 	w.Lock()
 	defer w.Unlock()
 
+	if w.stream == nil || w.id == 0 {
+		return
+	}
+
 	if w.stream != nil {
-		w.Stop()
+		w.isPlaying = false
+		w.dataPos = 0
+		sdl.PauseAudioStreamDevice(w.stream)
+		sdl.ClearAudioStream(w.stream)
 		sdl.DestroyAudioStream(w.stream)
 		w.stream = nil
 	}
+
 	if w.audioLen > 0 {
 		sdl.Free(unsafe.Pointer(w.audioBuf))
 		w.audioBuf = nil
 		w.audioLen = 0
 	}
+
 	unregisterAudio(w.id)
 }
 
@@ -805,6 +844,7 @@ func (o *mp3Audio) Pause() {
 	if o.stream == nil || o.id == 0 {
 		return
 	}
+
 	o.isPlaying = false
 	sdl.PauseAudioStreamDevice(o.stream)
 }
@@ -817,6 +857,7 @@ func (o *mp3Audio) Resume() {
 	if o.stream == nil || o.id == 0 {
 		return
 	}
+
 	o.isPlaying = true
 	sdl.ResumeAudioStreamDevice(o.stream)
 }
@@ -829,6 +870,7 @@ func (o *mp3Audio) Stop() {
 	if o.stream == nil || o.id == 0 {
 		return
 	}
+
 	o.isPlaying = false
 	o.dataPos = 0
 	sdl.PauseAudioStreamDevice(o.stream)
@@ -848,11 +890,20 @@ func (o *mp3Audio) Close() {
 	o.Lock()
 	defer o.Unlock()
 
+	// 安全检查
+	if o.stream == nil || o.id == 0 {
+		return
+	}
+
 	if o.stream != nil {
-		o.Stop()
+		o.isPlaying = false
+		o.dataPos = 0
+		sdl.PauseAudioStreamDevice(o.stream)
+		sdl.ClearAudioStream(o.stream)
 		sdl.DestroyAudioStream(o.stream)
 		o.stream = nil
 	}
+
 	unregisterAudio(o.id)
 }
 
