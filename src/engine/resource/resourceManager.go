@@ -75,3 +75,8 @@ func (rm *ResourceManager) GetMusic(path string) *[]IAudio {
 func (rm *ResourceManager) UnloadMusic(path string) {
 	rm.audioManager.UnloadMusic(path)
 }
+
+// 获取纹理大小
+func (rm *ResourceManager) GetTextureSize(path string) *sdl.FRect {
+	return rm.textureManager.GetTextureSize(path)
+}

@@ -3,9 +3,19 @@ package core
 import (
 	"log/slog"
 
+	"sunny_land/src/engine/render"
 	"sunny_land/src/engine/resource"
+	"sunny_land/src/engine/utils/math"
 
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
+	"github.com/go-gl/mathgl/mgl32"
+)
+
+const (
+	// 逻辑画面宽度
+	LogicWidth = int32(640)
+	// 逻辑画面高度
+	LogicHeight = int32(360)
 )
 
 // 主游戏应用，初始化SDL，管理游戏循环
@@ -20,6 +30,12 @@ type GameApp struct {
 	fpsManager *FPS
 	// 资源管理器
 	resourceManager *resource.ResourceManager
+	// 渲染器
+	renderer *render.Renderer
+	// 摄像机
+	camera *render.Camera
+	// 暂时测试
+	testRotation float64
 }
 
 // 创建游戏应用
@@ -57,15 +73,8 @@ func (g *GameApp) Destroy() {
 
 // 初始化
 func (g *GameApp) init() bool {
-	if !g.initSDL() {
-		return false
-	}
-
-	if !g.initTimer() {
-		return false
-	}
-
-	if !g.initResourceManager() {
+	if !g.initSDL() || !g.initTimer() || !g.initResourceManager() ||
+		!g.initRenderer() || !g.initCamera() {
 		return false
 	}
 
@@ -83,7 +92,7 @@ func (g *GameApp) initSDL() bool {
 	}
 
 	// 创建窗口与渲染器
-	if !sdl.CreateWindowAndRenderer("SunnyLand", 1280, 720, sdl.WindowResizable, &g.sdlWindow, &g.sdlRenderer) {
+	if !sdl.CreateWindowAndRenderer("SunnyLand", LogicWidth, LogicHeight, sdl.WindowResizable, &g.sdlWindow, &g.sdlRenderer) {
 		slog.Error("sdl create window and renderer error", slog.String("error", sdl.GetError()))
 		return false
 	}
@@ -93,7 +102,7 @@ func (g *GameApp) initSDL() bool {
 	// 它会把游戏画面放大到窗口允许的最大尺寸，同时不改变画面的比例
 	// 如果窗口比逻辑画面宽，会看到左右两侧有黑边(Letterbox)
 	// 如果窗口比逻辑画面高，会看到顶部和底部有黑边(Letterbox)
-	if !sdl.SetRenderLogicalPresentation(g.sdlRenderer, 1280, 720, sdl.LogicalPresentationLetterbox) {
+	if !sdl.SetRenderLogicalPresentation(g.sdlRenderer, LogicWidth, LogicHeight, sdl.LogicalPresentationLetterbox) {
 		slog.Error("sdl set render logical presentation error", slog.String("error", sdl.GetError()))
 		return false
 	}
@@ -113,6 +122,20 @@ func (g *GameApp) initTimer() bool {
 func (g *GameApp) initResourceManager() bool {
 	g.resourceManager = resource.NewResourceManager(g.sdlRenderer)
 	slog.Debug("resource manager init success")
+	return true
+}
+
+// 初始化渲染器
+func (g *GameApp) initRenderer() bool {
+	g.renderer = render.NewRenderer(g.sdlRenderer, g.resourceManager)
+	slog.Debug("renderer init success")
+	return true
+}
+
+// 初始化摄像机
+func (g *GameApp) initCamera() bool {
+	g.camera = render.NewCamera(mgl32.Vec2{float32(LogicWidth), float32(LogicHeight)}, mgl32.Vec2{0.0, 0.0}, nil)
+	slog.Debug("camera init success")
 	return true
 }
 
@@ -150,11 +173,20 @@ func (g *GameApp) handleEvents() {
 }
 
 // 更新
-func (g *GameApp) update(deltaTime float64) {
+func (g *GameApp) update( /*deltaTime*/ float64) {
+	g.testCamera()
 }
 
 // 渲染
 func (g *GameApp) render() {
+	// 清除屏幕
+	g.renderer.ClearScreen()
+
+	// 渲染代码
+	g.testRenderer()
+
+	// 显示渲染结果
+	g.renderer.Present()
 }
 
 // 测试资源管理器
@@ -166,4 +198,39 @@ func (g *GameApp) testResourceManager() {
 	g.resourceManager.UnloadTexture("assets/textures/Actors/eagle-attack.png")
 	g.resourceManager.UnloadFont("assets/fonts/VonwaonBitmap-16px.ttf", 16)
 	g.resourceManager.UnloadSound("assets/audio/button_click.wav")
+}
+
+// 测试渲染器
+func (g *GameApp) testRenderer() {
+	spriteWorld := render.NewSprite("assets/textures/Actors/frog.png", nil, false)
+	spriteUI := render.NewSprite("assets/textures/UI/buttons/Start1.png", nil, false)
+	spriteParallax := render.NewSprite("assets/textures/Layers/back.png", nil, false)
+
+	g.testRotation += 0.1
+
+	// 注意渲染顺序
+	g.renderer.DrawSpriteWithParallax(g.camera, spriteParallax, mgl32.Vec2{100, 100}, mgl32.Vec2{0.5, 0.5}, mgl32.Vec2{1.0, 1.0}, math.Vec2B{true, false})
+	g.renderer.DrawSprite(g.camera, spriteWorld, mgl32.Vec2{200, 200}, mgl32.Vec2{1.0, 1.0}, g.testRotation)
+	g.renderer.DrawUISprite(spriteUI, mgl32.Vec2{100, 100}, nil)
+}
+
+// 测试摄像机
+func (g *GameApp) testCamera() {
+	key_state := sdl.GetKeyboardState()
+	if key_state[sdl.ScancodeW] {
+		// 摄像机向上运动
+		g.camera.Move(mgl32.Vec2{0, -1})
+	}
+	if key_state[sdl.ScancodeS] {
+		// 摄像机向下运动
+		g.camera.Move(mgl32.Vec2{0, 1})
+	}
+	if key_state[sdl.ScancodeA] {
+		// 摄像机向左运动
+		g.camera.Move(mgl32.Vec2{-1, 0})
+	}
+	if key_state[sdl.ScancodeD] {
+		// 摄像机向右运动
+		g.camera.Move(mgl32.Vec2{1, 0})
+	}
 }
