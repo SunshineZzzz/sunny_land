@@ -3,7 +3,9 @@ package core
 import (
 	"log/slog"
 
+	"sunny_land/src/engine/component"
 	"sunny_land/src/engine/input"
+	"sunny_land/src/engine/object"
 	"sunny_land/src/engine/render"
 	"sunny_land/src/engine/resource"
 	"sunny_land/src/engine/utils/math"
@@ -183,6 +185,8 @@ func (g *GameApp) Run() {
 
 	// 测试资源管理器
 	g.testResourceManager()
+	// 测试游戏对象
+	g.testGameObject()
 
 	for g.isRunning {
 		g.fpsManager.Update()
@@ -296,4 +300,10 @@ func (g *GameApp) testInputManager() {
 			slog.Info("按下中 ", slog.String("action", action))
 		}
 	}
+}
+
+func (g *GameApp) testGameObject() {
+	gameObject := object.NewGameObject("test", "test")
+	gameObject.AddComponent(&component.Component{})
+	gameObject.AddComponent(&component.Component{})
 }
