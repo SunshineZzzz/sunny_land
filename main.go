@@ -8,7 +8,8 @@ import (
 )
 
 func main() {
-	minLevel := slog.LevelDebug
+	// minLevel := slog.LevelDebug
+	minLevel := slog.LevelInfo
 	options := &slog.HandlerOptions{
 		Level: minLevel,
 	}

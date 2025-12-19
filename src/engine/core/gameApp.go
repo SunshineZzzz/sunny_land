@@ -3,6 +3,7 @@ package core
 import (
 	"log/slog"
 
+	"sunny_land/src/engine/input"
 	"sunny_land/src/engine/render"
 	"sunny_land/src/engine/resource"
 	"sunny_land/src/engine/utils/math"
@@ -29,6 +30,8 @@ type GameApp struct {
 	camera *render.Camera
 	// 配置
 	config *Config
+	// 输入管理器
+	inputManager *input.InputManager
 	// 暂时测试
 	testRotation float64
 }
@@ -70,7 +73,7 @@ func (g *GameApp) Destroy() {
 func (g *GameApp) init() bool {
 	if !g.initConfig() || !g.initSDL() || !g.initTimer() ||
 		!g.initResourceManager() || !g.initRenderer() ||
-		!g.initCamera() {
+		!g.initCamera() || !g.initInputManager() {
 		return false
 	}
 
@@ -164,6 +167,13 @@ func (g *GameApp) initCamera() bool {
 	return true
 }
 
+// 初始化输入管理器
+func (g *GameApp) initInputManager() bool {
+	g.inputManager = input.NewInputManager(g.sdlRenderer, &g.config.InputMappings)
+	slog.Debug("input manager init success")
+	return true
+}
+
 // 运行
 func (g *GameApp) Run() {
 	slog.Debug("game app run")
@@ -178,6 +188,8 @@ func (g *GameApp) Run() {
 		g.fpsManager.Update()
 		deltaTime := g.fpsManager.GetDeltaTime()
 		// fmt.Printf("dt: %f\n", 1.0/deltaTime)
+		// 每帧首先更新输入管理器
+		g.inputManager.Update()
 		g.handleEvents()
 		g.update(deltaTime)
 		g.render()
@@ -188,13 +200,12 @@ func (g *GameApp) Run() {
 
 // 处理事件
 func (g *GameApp) handleEvents() {
-	var event sdl.Event
-	for sdl.PollEvent(&event) {
-		if event.Type() == sdl.EventQuit {
-			g.isRunning = false
-			return
-		}
+	if g.inputManager.ShouldQuit() {
+		slog.Debug("received quit event, exiting")
+		g.isRunning = false
 	}
+
+	g.testInputManager()
 }
 
 // 更新
@@ -257,5 +268,32 @@ func (g *GameApp) testCamera() {
 	if key_state[sdl.ScancodeD] {
 		// 摄像机向右运动
 		g.camera.Move(mgl32.Vec2{1, 0})
+	}
+}
+
+// 测试输入管理器
+func (g *GameApp) testInputManager() {
+	actions := []string{
+		"move_up",
+		"move_down",
+		"move_left",
+		"move_right",
+		"jump",
+		"attack",
+		"pause",
+		"MouseLeftClick",
+		"MouseRightClick",
+	}
+
+	for _, action := range actions {
+		if g.inputManager.IsActionPressed(action) {
+			slog.Info("按下 ", slog.String("action", action))
+		}
+		if g.inputManager.IsActionReleased(action) {
+			slog.Info("抬起 ", slog.String("action", action))
+		}
+		if g.inputManager.IsActionDown(action) {
+			slog.Info("按下中 ", slog.String("action", action))
+		}
 	}
 }
