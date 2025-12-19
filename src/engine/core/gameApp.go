@@ -11,13 +11,6 @@ import (
 	"github.com/go-gl/mathgl/mgl32"
 )
 
-const (
-	// 逻辑画面宽度
-	LogicWidth = int32(640)
-	// 逻辑画面高度
-	LogicHeight = int32(360)
-)
-
 // 主游戏应用，初始化SDL，管理游戏循环
 type GameApp struct {
 	// SDL窗口
@@ -34,6 +27,8 @@ type GameApp struct {
 	renderer *render.Renderer
 	// 摄像机
 	camera *render.Camera
+	// 配置
+	config *Config
 	// 暂时测试
 	testRotation float64
 }
@@ -73,13 +68,21 @@ func (g *GameApp) Destroy() {
 
 // 初始化
 func (g *GameApp) init() bool {
-	if !g.initSDL() || !g.initTimer() || !g.initResourceManager() ||
-		!g.initRenderer() || !g.initCamera() {
+	if !g.initConfig() || !g.initSDL() || !g.initTimer() ||
+		!g.initResourceManager() || !g.initRenderer() ||
+		!g.initCamera() {
 		return false
 	}
 
 	slog.Debug("game app init")
 	g.isRunning = true
+	return true
+}
+
+// 初始化配置
+func (g *GameApp) initConfig() bool {
+	g.config = NewConfig("assets/config.json")
+	slog.Debug("config init success")
 	return true
 }
 
@@ -91,10 +94,30 @@ func (g *GameApp) initSDL() bool {
 		return false
 	}
 
+	var windowFlags sdl.WindowFlags
+	if g.config.WindowResizable {
+		windowFlags |= sdl.WindowResizable
+	}
 	// 创建窗口与渲染器
-	if !sdl.CreateWindowAndRenderer("SunnyLand", LogicWidth, LogicHeight, sdl.WindowResizable, &g.sdlWindow, &g.sdlRenderer) {
-		slog.Error("sdl create window and renderer error", slog.String("error", sdl.GetError()))
+	g.sdlWindow = sdl.CreateWindow(g.config.WindowTitle, int32(g.config.WindowWidth), int32(g.config.WindowHeight), windowFlags)
+	if g.sdlWindow == nil {
+		slog.Error("sdl create window error", slog.String("error", sdl.GetError()))
 		return false
+	}
+
+	g.sdlRenderer = sdl.CreateRenderer(g.sdlWindow, "")
+	if g.sdlRenderer == nil {
+		slog.Error("sdl create renderer error", slog.String("error", sdl.GetError()))
+		return false
+	}
+
+	var vsyncMode int32 = sdl.RendererVSyncDisabled
+	if g.config.VsyncEnabled {
+		vsyncMode = sdl.RendererVSyncAdaptive
+	}
+	// 设置VSync，需要注意的是，开启后，驱动程序会尝试将帧率限制到显示器刷新率，有可能会覆盖我们手动设置的targetFps
+	if !sdl.SetRenderVSync(g.sdlRenderer, vsyncMode) {
+		slog.Warn("sdl set render vsync error", slog.String("error", sdl.GetError()))
 	}
 
 	// 设置渲染器的逻辑尺寸
@@ -102,7 +125,9 @@ func (g *GameApp) initSDL() bool {
 	// 它会把游戏画面放大到窗口允许的最大尺寸，同时不改变画面的比例
 	// 如果窗口比逻辑画面宽，会看到左右两侧有黑边(Letterbox)
 	// 如果窗口比逻辑画面高，会看到顶部和底部有黑边(Letterbox)
-	if !sdl.SetRenderLogicalPresentation(g.sdlRenderer, LogicWidth, LogicHeight, sdl.LogicalPresentationLetterbox) {
+	//
+	// 设置逻辑分辨率为窗口大小的一半(针对像素游戏)
+	if !sdl.SetRenderLogicalPresentation(g.sdlRenderer, int32(g.config.WindowWidth/2), int32(g.config.WindowHeight/2), sdl.LogicalPresentationLetterbox) {
 		slog.Error("sdl set render logical presentation error", slog.String("error", sdl.GetError()))
 		return false
 	}
@@ -113,7 +138,7 @@ func (g *GameApp) initSDL() bool {
 
 // 初始化timer
 func (g *GameApp) initTimer() bool {
-	g.fpsManager.SetTargetFps(144)
+	g.fpsManager.SetTargetFps(g.config.TargetFPS)
 	slog.Debug("fps manager init success")
 	return true
 }
@@ -134,7 +159,7 @@ func (g *GameApp) initRenderer() bool {
 
 // 初始化摄像机
 func (g *GameApp) initCamera() bool {
-	g.camera = render.NewCamera(mgl32.Vec2{float32(LogicWidth), float32(LogicHeight)}, mgl32.Vec2{0.0, 0.0}, nil)
+	g.camera = render.NewCamera(mgl32.Vec2{float32(g.config.WindowWidth / 2), float32(g.config.WindowHeight / 2)}, mgl32.Vec2{0.0, 0.0}, nil)
 	slog.Debug("camera init success")
 	return true
 }
