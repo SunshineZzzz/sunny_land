@@ -4,14 +4,22 @@ import (
 	"log/slog"
 
 	"sunny_land/src/engine/component"
+	econtext "sunny_land/src/engine/context"
 	"sunny_land/src/engine/input"
 	"sunny_land/src/engine/object"
 	"sunny_land/src/engine/render"
 	"sunny_land/src/engine/resource"
+	"sunny_land/src/engine/utils"
 	"sunny_land/src/engine/utils/math"
 
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
 	"github.com/go-gl/mathgl/mgl32"
+)
+
+var (
+	// 暂时测试
+	testRotation float64 = 0.0
+	gameObject           = object.NewGameObject("test", "test")
 )
 
 // 主游戏应用，初始化SDL，管理游戏循环
@@ -34,8 +42,8 @@ type GameApp struct {
 	config *Config
 	// 输入管理器
 	inputManager *input.InputManager
-	// 暂时测试
-	testRotation float64
+	// 上下文对象
+	context *econtext.Context
 }
 
 // 创建游戏应用
@@ -75,7 +83,8 @@ func (g *GameApp) Destroy() {
 func (g *GameApp) init() bool {
 	if !g.initConfig() || !g.initSDL() || !g.initTimer() ||
 		!g.initResourceManager() || !g.initRenderer() ||
-		!g.initCamera() || !g.initInputManager() {
+		!g.initCamera() || !g.initInputManager() ||
+		!g.initContext() {
 		return false
 	}
 
@@ -176,6 +185,13 @@ func (g *GameApp) initInputManager() bool {
 	return true
 }
 
+// 初始化上下文对象
+func (g *GameApp) initContext() bool {
+	g.context = econtext.NewContext(g.inputManager, g.renderer, g.resourceManager, g.camera)
+	slog.Debug("context init success")
+	return true
+}
+
 // 运行
 func (g *GameApp) Run() {
 	slog.Debug("game app run")
@@ -224,6 +240,7 @@ func (g *GameApp) render() {
 
 	// 渲染代码
 	g.testRenderer()
+	gameObject.Render(g.context)
 
 	// 显示渲染结果
 	g.renderer.Present()
@@ -246,11 +263,11 @@ func (g *GameApp) testRenderer() {
 	spriteUI := render.NewSprite("assets/textures/UI/buttons/Start1.png", nil, false)
 	spriteParallax := render.NewSprite("assets/textures/Layers/back.png", nil, false)
 
-	g.testRotation += 0.1
+	testRotation += 0.1
 
 	// 注意渲染顺序
 	g.renderer.DrawSpriteWithParallax(g.camera, spriteParallax, mgl32.Vec2{100, 100}, mgl32.Vec2{0.5, 0.5}, mgl32.Vec2{1.0, 1.0}, math.Vec2B{true, false})
-	g.renderer.DrawSprite(g.camera, spriteWorld, mgl32.Vec2{200, 200}, mgl32.Vec2{1.0, 1.0}, g.testRotation)
+	g.renderer.DrawSprite(g.camera, spriteWorld, mgl32.Vec2{200, 200}, mgl32.Vec2{1.0, 1.0}, testRotation)
 	g.renderer.DrawUISprite(spriteUI, mgl32.Vec2{100, 100}, nil)
 }
 
@@ -303,7 +320,15 @@ func (g *GameApp) testInputManager() {
 }
 
 func (g *GameApp) testGameObject() {
-	gameObject := object.NewGameObject("test", "test")
-	gameObject.AddComponent(&component.Component{})
-	gameObject.AddComponent(&component.Component{})
+	transformComp := component.NewTransformComponent(mgl32.Vec2{100.0, 100.0}, mgl32.Vec2{1.0, 1.0}, 0.0)
+	spriteComp := component.NewSpriteComponent("assets/textures/Props/big-crate.png", g.resourceManager, utils.AlignCenter, nil, false)
+	gameObject.AddComponent(transformComp)
+	gameObject.AddComponent(spriteComp)
+
+	transformComp2 := gameObject.GetComponent(&component.TransformComponent{}).(*component.TransformComponent)
+	if transformComp2 != transformComp {
+		slog.Error("testGameObject: transform component mismatch")
+	}
+	transformComp2.SetScale(mgl32.Vec2{2.0, 2.0})
+	transformComp2.SetRotation(30.0)
 }

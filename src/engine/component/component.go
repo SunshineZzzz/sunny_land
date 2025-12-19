@@ -1,6 +1,7 @@
 package component
 
 import (
+	econtext "sunny_land/src/engine/context"
 	"sunny_land/src/engine/object"
 )
 
@@ -17,18 +18,16 @@ var _ object.IComponent = (*Component)(nil)
 func (c *Component) Init() {}
 
 // 更新组件
-func (c *Component) Update(float64) {}
+func (c *Component) Update(float64, *econtext.Context) {}
 
 // 处理输入
-func (c *Component) HandleEvents() {}
+func (c *Component) HandleEvents(context *econtext.Context) {}
 
 // 渲染
-func (c *Component) Render() {}
+func (c *Component) Render(context *econtext.Context) {}
 
 // 清理组件
 func (c *Component) Clean() {}
-
-// 非接口实现方法
 
 // 设置组件所属的游戏对象
 func (c *Component) SetOwner(owner *object.GameObject) {
@@ -39,3 +38,5 @@ func (c *Component) SetOwner(owner *object.GameObject) {
 func (c *Component) GetOwner() *object.GameObject {
 	return c.owner
 }
+
+// 非接口实现方法

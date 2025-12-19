@@ -3,6 +3,8 @@ package object
 import (
 	"log/slog"
 	"reflect"
+
+	econtext "sunny_land/src/engine/context"
 )
 
 // 组件接口
@@ -10,13 +12,17 @@ type IComponent interface {
 	// 初始化组件
 	Init()
 	// 更新组件
-	Update(float64)
+	Update(float64, *econtext.Context)
 	// 处理输入
-	HandleEvents()
+	HandleEvents(*econtext.Context)
 	// 渲染
-	Render()
+	Render(*econtext.Context)
 	// 清理
 	Clean()
+	// 设置组件所属的游戏对象
+	SetOwner(*GameObject)
+	// 获取组件所属的游戏对象
+	GetOwner() *GameObject
 }
 
 // 游戏对象，负责管理游戏对象的组件
@@ -43,23 +49,23 @@ func NewGameObject(name string, tag string) *GameObject {
 }
 
 // 更新
-func (gt *GameObject) Update(deltaTime float64) {
+func (gt *GameObject) Update(deltaTime float64, context *econtext.Context) {
 	for _, component := range gt.components {
-		component.Update(deltaTime)
+		component.Update(deltaTime, context)
 	}
 }
 
 // 渲染
-func (gt *GameObject) Render() {
+func (gt *GameObject) Render(context *econtext.Context) {
 	for _, component := range gt.components {
-		component.Render()
+		component.Render(context)
 	}
 }
 
 // 处理输入
-func (gt *GameObject) HandleEvents() {
+func (gt *GameObject) HandleEvents(context *econtext.Context) {
 	for _, component := range gt.components {
-		component.HandleEvents()
+		component.HandleEvents(context)
 	}
 }
 
@@ -80,6 +86,8 @@ func (gt *GameObject) AddComponent(component IComponent) {
 		return
 	}
 	gt.components[componentType] = component
+	component.SetOwner(gt)
+	component.Init()
 	slog.Debug("add component to game object", slog.String("gameObject.Name", gt.name), slog.String("gameObject.Tag", gt.tag),
 		slog.String("componentType", componentType.String()))
 }

@@ -9,7 +9,7 @@ import (
 // 精灵图
 type Sprite struct {
 	// 纹理资源标识符
-	textureID string
+	textureId string
 	// 要绘制的纹理部分
 	sourceRect *sdl.FRect
 	// 是否水平反转
@@ -17,23 +17,23 @@ type Sprite struct {
 }
 
 // 创建精灵图
-func NewSprite(textureID string, sourceRect *sdl.FRect, isFlipped bool) *Sprite {
-	slog.Debug("create sprite", slog.Any("textureID", textureID), slog.Any("sourceRect", sourceRect), slog.Any("isFlipped", isFlipped))
+func NewSprite(textureId string, sourceRect *sdl.FRect, isFlipped bool) *Sprite {
+	slog.Debug("create sprite", slog.Any("textureId", textureId), slog.Any("sourceRect", sourceRect), slog.Any("isFlipped", isFlipped))
 	return &Sprite{
-		textureID:  textureID,
+		textureId:  textureId,
 		sourceRect: sourceRect,
 		isFlipped:  isFlipped,
 	}
 }
 
 // 获取纹理资源标识符
-func (s *Sprite) GetTextureID() string {
-	return s.textureID
+func (s *Sprite) GetTextureId() string {
+	return s.textureId
 }
 
 // 设置纹理资源标识符
-func (s *Sprite) SetTextureID(textureID string) {
-	s.textureID = textureID
+func (s *Sprite) SetTextureId(textureId string) {
+	s.textureId = textureId
 }
 
 // 获取要绘制的纹理部分

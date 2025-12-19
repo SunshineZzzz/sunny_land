@@ -1,0 +1,33 @@
+package context
+
+import (
+	"log/slog"
+	"sunny_land/src/engine/input"
+	"sunny_land/src/engine/render"
+	"sunny_land/src/engine/resource"
+)
+
+// 持有对核心引擎模块引用的上下文对象，用于简化依赖注入，
+// 传递Context对象即可获取引擎的各个模块。
+type Context struct {
+	// 输入管理器
+	InputManager *input.InputManager
+	// 渲染器
+	Renderer *render.Renderer
+	// 资源管理器
+	ResourceManager *resource.ResourceManager
+	// 相机
+	Camera *render.Camera
+}
+
+// 创建上下文对象
+func NewContext(inputManager *input.InputManager, renderer *render.Renderer,
+	resourceManager *resource.ResourceManager, camera *render.Camera) *Context {
+	slog.Debug("create context")
+	return &Context{
+		InputManager:    inputManager,
+		Renderer:        renderer,
+		ResourceManager: resourceManager,
+		Camera:          camera,
+	}
+}

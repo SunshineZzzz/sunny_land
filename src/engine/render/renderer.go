@@ -40,16 +40,16 @@ func NewRenderer(sdlRenderer *sdl.Renderer, resourceManager *resource.ResourceMa
 
 // 绘制精灵图
 func (r *Renderer) DrawSprite(camera *Camera, sprite *Sprite, position, scale mgl32.Vec2, angle float64) {
-	texture := r.resourceManager.GetTexture(sprite.textureID)
+	texture := r.resourceManager.GetTexture(sprite.textureId)
 	if texture == nil {
-		slog.Error("texture is nil", slog.String("textureID", sprite.textureID))
+		slog.Error("texture is nil", slog.String("textureID", sprite.textureId))
 		return
 	}
 
 	// 获取精灵图源矩形
 	srcRect := r.GetSpriteSrcRect(sprite)
 	if srcRect == nil {
-		slog.Error("sourceRect is nil", slog.String("textureID", sprite.textureID))
+		slog.Error("sourceRect is nil", slog.String("textureID", sprite.textureId))
 		return
 	}
 
@@ -74,23 +74,23 @@ func (r *Renderer) DrawSprite(camera *Camera, sprite *Sprite, position, scale mg
 	}
 	// 执行绘制，默认旋转中心为精灵的中心点
 	if !sdl.RenderTextureRotated(r.sdlRenderer, texture, srcRect, &dstRect, angle, nil, flipMode) {
-		slog.Error("render texture rotated failed", slog.String("textureID", sprite.textureID), slog.Any("srcRect", srcRect),
+		slog.Error("render texture rotated failed", slog.String("textureID", sprite.textureId), slog.Any("srcRect", srcRect),
 			slog.Float64("angle", angle), slog.Any("flipMode", flipMode))
 	}
 }
 
 // 绘制视差精灵图
 func (r *Renderer) DrawSpriteWithParallax(camera *Camera, sprite *Sprite, position, scrollFactor, scale mgl32.Vec2, repeat math.Vec2B) {
-	texture := r.resourceManager.GetTexture(sprite.textureID)
+	texture := r.resourceManager.GetTexture(sprite.textureId)
 	if texture == nil {
-		slog.Error("texture is nil", slog.String("textureID", sprite.textureID))
+		slog.Error("texture is nil", slog.String("textureID", sprite.textureId))
 		return
 	}
 
 	// 获取精灵图源矩形
 	srcRect := r.GetSpriteSrcRect(sprite)
 	if srcRect == nil {
-		slog.Error("sourceRect is nil", slog.String("textureID", sprite.textureID))
+		slog.Error("sourceRect is nil", slog.String("textureID", sprite.textureId))
 		return
 	}
 
@@ -135,7 +135,7 @@ func (r *Renderer) DrawSpriteWithParallax(camera *Camera, sprite *Sprite, positi
 				H: scaledTexH,
 			}
 			if !sdl.RenderTexture(r.sdlRenderer, texture, srcRect, &destRect) {
-				slog.Error("render parallax texture failed", slog.String("textureID", sprite.textureID), slog.Any("srcRect", srcRect),
+				slog.Error("render parallax texture failed", slog.String("textureID", sprite.textureId), slog.Any("srcRect", srcRect),
 					slog.Any("destRect", destRect))
 				return
 			}
@@ -145,16 +145,16 @@ func (r *Renderer) DrawSpriteWithParallax(camera *Camera, sprite *Sprite, positi
 
 // 绘制用户界面精灵图
 func (r *Renderer) DrawUISprite(sprite *Sprite, position mgl32.Vec2, size *mgl32.Vec2) {
-	texture := r.resourceManager.GetTexture(sprite.textureID)
+	texture := r.resourceManager.GetTexture(sprite.textureId)
 	if texture == nil {
-		slog.Error("texture is nil", slog.String("textureID", sprite.textureID))
+		slog.Error("texture is nil", slog.String("textureID", sprite.textureId))
 		return
 	}
 
 	// 获取精灵图源矩形
 	srcRect := r.GetSpriteSrcRect(sprite)
 	if srcRect == nil {
-		slog.Error("sourceRect is nil", slog.String("textureID", sprite.textureID))
+		slog.Error("sourceRect is nil", slog.String("textureID", sprite.textureId))
 		return
 	}
 
@@ -176,7 +176,7 @@ func (r *Renderer) DrawUISprite(sprite *Sprite, position mgl32.Vec2, size *mgl32
 	}
 	// 执行绘制
 	if !sdl.RenderTextureRotated(r.sdlRenderer, texture, srcRect, &dstRect, 0.0, nil, flipMode) {
-		slog.Error("render ui texture failed", slog.String("textureID", sprite.textureID), slog.Any("srcRect", srcRect),
+		slog.Error("render ui texture failed", slog.String("textureID", sprite.textureId), slog.Any("srcRect", srcRect),
 			slog.Any("destRect", dstRect))
 		return
 	}
@@ -216,14 +216,14 @@ func (r *Renderer) GetSpriteSrcRect(sprite *Sprite) *sdl.FRect {
 	if srcRect != nil {
 		// 如果Sprite中存在指定rect，则判断尺寸是否有效
 		if srcRect.W <= 0.0 || srcRect.H <= 0.0 {
-			slog.Error("sourceRect size is invalid", slog.String("textureID", sprite.textureID), slog.Any("sourceRect", srcRect))
+			slog.Error("sourceRect size is invalid", slog.String("textureID", sprite.textureId), slog.Any("sourceRect", srcRect))
 			return nil
 		}
 		return srcRect
 	}
 
 	// 否则获取纹理尺寸并返回整个纹理大小
-	return r.resourceManager.GetTextureSize(sprite.textureID)
+	return r.resourceManager.GetTextureSize(sprite.textureId)
 }
 
 // 是否在视口内
