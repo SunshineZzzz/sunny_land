@@ -21,10 +21,10 @@ func (c *Component) Init() {}
 func (c *Component) Update(float64, *econtext.Context) {}
 
 // 处理输入
-func (c *Component) HandleEvents(context *econtext.Context) {}
+func (c *Component) HandleInput(*econtext.Context) {}
 
 // 渲染
-func (c *Component) Render(context *econtext.Context) {}
+func (c *Component) Render(*econtext.Context) {}
 
 // 清理组件
 func (c *Component) Clean() {}

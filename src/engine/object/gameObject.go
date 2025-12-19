@@ -14,7 +14,7 @@ type IComponent interface {
 	// 更新组件
 	Update(float64, *econtext.Context)
 	// 处理输入
-	HandleEvents(*econtext.Context)
+	HandleInput(*econtext.Context)
 	// 渲染
 	Render(*econtext.Context)
 	// 清理
@@ -63,9 +63,9 @@ func (gt *GameObject) Render(context *econtext.Context) {
 }
 
 // 处理输入
-func (gt *GameObject) HandleEvents(context *econtext.Context) {
+func (gt *GameObject) HandleInput(context *econtext.Context) {
 	for _, component := range gt.components {
-		component.HandleEvents(context)
+		component.HandleInput(context)
 	}
 }
 

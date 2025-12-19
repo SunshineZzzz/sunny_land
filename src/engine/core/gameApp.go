@@ -9,6 +9,7 @@ import (
 	"sunny_land/src/engine/object"
 	"sunny_land/src/engine/render"
 	"sunny_land/src/engine/resource"
+	"sunny_land/src/engine/scene"
 	"sunny_land/src/engine/utils"
 	"sunny_land/src/engine/utils/math"
 
@@ -44,6 +45,8 @@ type GameApp struct {
 	inputManager *input.InputManager
 	// 上下文对象
 	context *econtext.Context
+	// 场景管理器
+	sceneManager *scene.SceneManager
 }
 
 // 创建游戏应用
@@ -84,9 +87,14 @@ func (g *GameApp) init() bool {
 	if !g.initConfig() || !g.initSDL() || !g.initTimer() ||
 		!g.initResourceManager() || !g.initRenderer() ||
 		!g.initCamera() || !g.initInputManager() ||
-		!g.initContext() {
+		!g.initContext() || !g.initSceneManager() {
 		return false
 	}
+
+	// 创建第一个场景
+	scene := scene.NewGameScene("GameScene", g.context, g.sceneManager)
+	// 添加场景到场景管理器
+	g.sceneManager.RequestPushScene(scene)
 
 	slog.Debug("game app init")
 	g.isRunning = true
@@ -192,6 +200,13 @@ func (g *GameApp) initContext() bool {
 	return true
 }
 
+// 初始化场景管理器
+func (g *GameApp) initSceneManager() bool {
+	g.sceneManager = scene.NewSceneManager(g.context)
+	slog.Debug("scene manager init success")
+	return true
+}
+
 // 运行
 func (g *GameApp) Run() {
 	slog.Debug("game app run")
@@ -210,7 +225,7 @@ func (g *GameApp) Run() {
 		// fmt.Printf("dt: %f\n", 1.0/deltaTime)
 		// 每帧首先更新输入管理器
 		g.inputManager.Update()
-		g.handleEvents()
+		g.HandleEvents()
 		g.update(deltaTime)
 		g.render()
 	}
@@ -219,18 +234,24 @@ func (g *GameApp) Run() {
 }
 
 // 处理事件
-func (g *GameApp) handleEvents() {
+func (g *GameApp) HandleEvents() {
 	if g.inputManager.ShouldQuit() {
 		slog.Debug("received quit event, exiting")
 		g.isRunning = false
 	}
 
+	// 测试输入管理器
 	g.testInputManager()
+	// 处理场景事件
+	g.sceneManager.HandleInput()
 }
 
 // 更新
-func (g *GameApp) update( /*deltaTime*/ float64) {
+func (g *GameApp) update(dt float64) {
+	// 更新摄像机
 	g.testCamera()
+	// 更新场景
+	g.sceneManager.Update(dt)
 }
 
 // 渲染
@@ -239,8 +260,11 @@ func (g *GameApp) render() {
 	g.renderer.ClearScreen()
 
 	// 渲染代码
+	// 测试代码
 	g.testRenderer()
 	gameObject.Render(g.context)
+	// 渲染场景
+	g.sceneManager.Render()
 
 	// 显示渲染结果
 	g.renderer.Present()
