@@ -215,9 +215,9 @@ func (g *GameApp) Run() {
 	}
 
 	// 测试资源管理器
-	g.testResourceManager()
+	// g.testResourceManager()
 	// 测试游戏对象
-	g.testGameObject()
+	// g.testGameObject()
 
 	for g.isRunning {
 		g.fpsManager.Update()
@@ -241,14 +241,14 @@ func (g *GameApp) HandleEvents() {
 	}
 
 	// 测试输入管理器
-	g.testInputManager()
+	// g.testInputManager()
 	// 处理场景事件
 	g.sceneManager.HandleInput()
 }
 
 // 更新
 func (g *GameApp) update(dt float64) {
-	// 更新摄像机
+	// 测试更新摄像机
 	g.testCamera()
 	// 更新场景
 	g.sceneManager.Update(dt)
@@ -261,8 +261,8 @@ func (g *GameApp) render() {
 
 	// 渲染代码
 	// 测试代码
-	g.testRenderer()
-	gameObject.Render(g.context)
+	// g.testRenderer()
+	// gameObject.Render(g.context)
 	// 渲染场景
 	g.sceneManager.Render()
 

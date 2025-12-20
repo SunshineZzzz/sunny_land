@@ -19,7 +19,7 @@ type SpriteComponent struct {
 	Component
 	// 资源管理器
 	resourceManager *resource.ResourceManager
-	// 变换组件
+	// 缓存变换组件
 	transformComponent *TransformComponent
 	// 精灵图对象
 	sprite *render.Sprite

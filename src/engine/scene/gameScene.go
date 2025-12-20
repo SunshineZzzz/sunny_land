@@ -27,9 +27,14 @@ func NewGameScene(sceneName string, ctx *econtext.Context, sceneManager *SceneMa
 // 初始化游戏场景
 func (gs *GameScene) Init() {
 	gs.scene.Init()
-	slog.Debug("GameScene initialized", slog.String("sceneName", gs.sceneName))
 
+	// 加载关卡
+	NewLevelLoader().LoadLevel("assets/maps/level1.tmj", gs)
+
+	// 创建测试游戏对象
 	gs.createTestObject()
+
+	slog.Debug("GameScene initialized", slog.String("sceneName", gs.sceneName))
 }
 
 // 更新
