@@ -6,6 +6,7 @@ import (
 
 	econtext "sunny_land/src/engine/context"
 	"sunny_land/src/engine/object"
+	"sunny_land/src/engine/resource"
 )
 
 // 场景接口，负责管理场景中的游戏对象和场景生命周期
@@ -32,6 +33,8 @@ type IScene interface {
 	GetName() string
 	// 判断场景是否已初始化
 	IsInitialized() bool
+	// 获取资源管理器
+	GetResourceManager() *resource.ResourceManager
 }
 
 // 基础场景
@@ -241,4 +244,9 @@ func (s *scene) FindGameObjectByName(name string) *object.GameObject {
 	}
 	slog.Warn("GameObject not found in scene", slog.String("sceneName", s.sceneName), slog.String("gameObjectName", name))
 	return nil
+}
+
+// 获取资源管理器
+func (s *scene) GetResourceManager() *resource.ResourceManager {
+	return s.ctx.ResourceManager
 }

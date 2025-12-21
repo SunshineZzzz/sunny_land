@@ -51,6 +51,24 @@ func NewSpriteComponent(textureId string, resourceManager *resource.ResourceMana
 	}
 }
 
+// 根据精灵图对象创建精灵图组件
+func NewSpriteComponentFromSprite(sprite *render.Sprite, resourceManager *resource.ResourceManager, alignment utils.Alignment) *SpriteComponent {
+	if sprite == nil {
+		slog.Error("sprite is nil")
+		return nil
+	}
+	if resourceManager == nil {
+		slog.Error("resourceManager is nil")
+	}
+	slog.Debug("create sprite component from sprite", slog.String("textureId", sprite.GetTextureId()),
+		slog.Any("sourceRect", sprite.GetSourceRect()), slog.Bool("isFlipped", sprite.GetIsFlipped()))
+	return &SpriteComponent{
+		resourceManager: resourceManager,
+		sprite:          sprite,
+		alignment:       alignment,
+	}
+}
+
 // 初始化
 func (sc *SpriteComponent) Init() {
 	if sc.owner == nil {

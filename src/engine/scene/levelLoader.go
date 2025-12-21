@@ -7,6 +7,7 @@ import (
 	"sunny_land/src/engine/component"
 	"sunny_land/src/engine/object"
 	"sunny_land/src/engine/render"
+	"sunny_land/src/engine/utils"
 	"sunny_land/src/engine/utils/math"
 
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
@@ -305,6 +306,66 @@ func (ll *LevelLoader) getTileInfoByGId(gId int) *component.TileInfo {
 
 // 加载对象图层
 func (ll *LevelLoader) loadObjectLayer(layer *simplejson.Json, scene IScene) {
+	if layer.Get("objects") == nil || layer.Get("objects").MustArray() == nil {
+		slog.Error("object layer has no objects", slog.String("layerName", layer.Get("name").MustString("Unnamed")))
+		return
+	}
+
+	// 获取对象数据
+	objects := layer.Get("objects")
+	for i := 0; i < len(objects.MustArray()); i++ {
+		obj := objects.GetIndex(i)
+		gid := obj.Get("gid").MustInt(0)
+		if gid == 0 {
+			// 如果gid为0(即不存在)，则代表自己绘制的形状(可能是碰撞盒、触发器等，未来按需处理)
+			continue
+		}
+		tileInfo := ll.getTileInfoByGId(gid)
+		if tileInfo.Sprite.GetTextureId() == "" {
+			slog.Error("tileInfo sprite has no textureId", slog.Int("gId", gid))
+			continue
+		}
+		// 获取构建变换组件的信息
+		position := mgl32.Vec2{
+			float32(obj.Get("x").MustFloat64(0.0)),
+			float32(obj.Get("y").MustFloat64(0.0)),
+		}
+		// 获取绘制的目标大小
+		dstSize := mgl32.Vec2{
+			float32(obj.Get("width").MustFloat64(0.0)),
+			float32(obj.Get("height").MustFloat64(0.0)),
+		}
+		// 获取绘制的源大小
+		srcSize := mgl32.Vec2{
+			tileInfo.Sprite.GetSourceRect().W,
+			tileInfo.Sprite.GetSourceRect().H,
+		}
+		// 计算出缩放比例
+		scale := mgl32.Vec2{
+			dstSize.X() / srcSize.X(),
+			dstSize.Y() / srcSize.Y(),
+		}
+		// 重新计算绘制坐标，把左下角坐标转到左上角
+		position[1] = position.Y() - dstSize.Y()
+		// 获取旋转角度
+		rotation := obj.Get("rotation").MustFloat64(0.0)
+		// 获取对象名称
+		name := obj.Get("name").MustString("Unnamed")
+
+		// 创建游戏对象并且添加组件
+		// 创建游戏对象
+		gameObject := object.NewGameObject(name, name)
+		// 创建变换组件
+		transformCom := component.NewTransformComponent(position, scale, float64(rotation))
+		// 创建渲染组件
+		spriteCom := component.NewSpriteComponentFromSprite(tileInfo.Sprite, scene.GetResourceManager(), utils.AlignNone)
+		// 添加到游戏对象中
+		gameObject.AddComponent(transformCom)
+		gameObject.AddComponent(spriteCom)
+		// 游戏对象添加到场景中
+		scene.AddGameObject(gameObject)
+		slog.Info("add game object to scene", slog.String("gameObjectName", name))
+	}
 }
 
 /**
