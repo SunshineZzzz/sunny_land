@@ -7,6 +7,7 @@ import (
 	"sunny_land/src/engine/object"
 	"sunny_land/src/engine/utils"
 
+	"github.com/SunshineZzzz/purego-sdl3/sdl"
 	"github.com/go-gl/mathgl/mgl32"
 )
 
@@ -14,6 +15,8 @@ import (
 type GameScene struct {
 	// 继承基础场景
 	scene
+	// 测试游戏对象
+	testObject *object.GameObject
 }
 
 // 创建游戏场景
@@ -39,6 +42,11 @@ func (gs *GameScene) Init() {
 
 // 更新
 func (gs *GameScene) Update(dt float64) {
+	// 测试更新摄像机
+	// gs.testCamera()
+	// 测试更新测试游戏对象
+	gs.TestObject()
+
 	gs.scene.Update(dt)
 }
 
@@ -63,8 +71,53 @@ func (gs *GameScene) createTestObject() {
 	gt := object.NewGameObject("TestObject", "TestObject")
 	transform := component.NewTransformComponent(mgl32.Vec2{100.0, 100.0}, mgl32.Vec2{1.0, 1.0}, 0.0)
 	sprite := component.NewSpriteComponent("assets/textures/Props/big-crate.png", gs.ctx.ResourceManager, utils.AlignCenter, nil, false)
+	physics := component.NewPhysicsComponent(gs.ctx.PhysicsEngine, 1.0, true)
+
 	gt.AddComponent(transform)
 	gt.AddComponent(sprite)
+	gt.AddComponent(physics)
 	// 将创建好的游戏对象添加到场景中
 	gs.scene.AddGameObject(gt)
+
+	// 保存测试游戏对象
+	gs.testObject = gt
+}
+
+// 测试摄像机
+func (gs *GameScene) testCamera() {
+	key_state := sdl.GetKeyboardState()
+	if key_state[sdl.ScancodeW] {
+		// 摄像机向上运动
+		gs.ctx.Camera.Move(mgl32.Vec2{0, -1})
+	}
+	if key_state[sdl.ScancodeS] {
+		// 摄像机向下运动
+		gs.ctx.Camera.Move(mgl32.Vec2{0, 1})
+	}
+	if key_state[sdl.ScancodeA] {
+		// 摄像机向左运动
+		gs.ctx.Camera.Move(mgl32.Vec2{-1, 0})
+	}
+	if key_state[sdl.ScancodeD] {
+		// 摄像机向右运动
+		gs.ctx.Camera.Move(mgl32.Vec2{1, 0})
+	}
+}
+
+// 测试游戏对象
+func (gs *GameScene) TestObject() {
+	if gs.testObject == nil {
+		return
+	}
+	inputManager := gs.ctx.InputManager
+
+	if inputManager.IsActionDown("move_left") {
+		gs.testObject.GetComponent(&component.TransformComponent{}).(*component.TransformComponent).Translate(mgl32.Vec2{-1, 0})
+	}
+	if inputManager.IsActionDown("move_right") {
+		gs.testObject.GetComponent(&component.TransformComponent{}).(*component.TransformComponent).Translate(mgl32.Vec2{1, 0})
+	}
+	if inputManager.IsActionPressed("jump") {
+		gs.testObject.GetComponent(&component.PhysicsComponent{}).(*component.PhysicsComponent).SetVelocity(mgl32.Vec2{0, -400})
+	}
 }

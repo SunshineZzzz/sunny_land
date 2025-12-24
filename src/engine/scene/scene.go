@@ -82,6 +82,9 @@ func (s *scene) Update(dt float64) {
 		return
 	}
 
+	// 先更新物理引擎
+	s.ctx.PhysicsEngine.Update(dt)
+
 	// 更新所有游戏对象，并删除需要移除的对象
 	for e := s.gameObjects.Front(); e != nil; {
 		next := e.Next()

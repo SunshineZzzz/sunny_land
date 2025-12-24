@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	econtext "sunny_land/src/engine/context"
 	"sunny_land/src/engine/object"
+	"sunny_land/src/engine/physics"
 
 	"github.com/go-gl/mathgl/mgl32"
 )
@@ -22,6 +23,9 @@ type TransformComponent struct {
 
 // 确保TransformComponent实现了IComponent接口
 var _ object.IComponent = (*TransformComponent)(nil)
+
+// 确保TransformComponent实现了ITransformComponent接口
+var _ physics.ITransformComponent = (*TransformComponent)(nil)
 
 // 创建变换组件
 func NewTransformComponent(position mgl32.Vec2, scale mgl32.Vec2, rotation float64) *TransformComponent {

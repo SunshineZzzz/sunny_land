@@ -3,6 +3,7 @@ package context
 import (
 	"log/slog"
 	"sunny_land/src/engine/input"
+	"sunny_land/src/engine/physics"
 	"sunny_land/src/engine/render"
 	"sunny_land/src/engine/resource"
 )
@@ -18,16 +19,20 @@ type Context struct {
 	ResourceManager *resource.ResourceManager
 	// 相机
 	Camera *render.Camera
+	// 物理引擎
+	PhysicsEngine *physics.PhysicsEngine
 }
 
 // 创建上下文对象
 func NewContext(inputManager *input.InputManager, renderer *render.Renderer,
-	resourceManager *resource.ResourceManager, camera *render.Camera) *Context {
+	resourceManager *resource.ResourceManager, camera *render.Camera,
+	physicsEngine *physics.PhysicsEngine) *Context {
 	slog.Debug("create context")
 	return &Context{
 		InputManager:    inputManager,
 		Renderer:        renderer,
 		ResourceManager: resourceManager,
 		Camera:          camera,
+		PhysicsEngine:   physicsEngine,
 	}
 }
