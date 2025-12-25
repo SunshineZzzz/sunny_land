@@ -12,6 +12,10 @@ import (
 type ITransformComponent interface {
 	// 平移
 	Translate(mgl32.Vec2)
+	// 获取缩放
+	GetScale() mgl32.Vec2
+	// 获取位置
+	GetPosition() mgl32.Vec2
 }
 
 // 物理组件抽象
@@ -34,6 +38,16 @@ type IPhysicsComponent interface {
 	GetVelocity() mgl32.Vec2
 	// 设置速度
 	SetVelocity(mgl32.Vec2)
+	// 获取碰撞组件
+	GetColliderComponent() IColliderComponent
+	// 获取游戏对象
+	GetGameObject() any
+}
+
+// 碰撞组件对
+type CollisionPair struct {
+	A any
+	B any
 }
 
 // 物理引擎，负责管理和模拟物理行为，碰撞检测
@@ -44,6 +58,8 @@ type PhysicsEngine struct {
 	gravity mgl32.Vec2
 	// 最大速度值{-500.0, -500.0}/{500.0, 500.0}，单位：像素/秒
 	maxSpeed float32
+	// 存储本帧发生的碰撞组件对
+	collisionPairs []CollisionPair
 }
 
 // 创建物理引擎
@@ -53,6 +69,7 @@ func NewPhysicsEngine() *PhysicsEngine {
 		physicsComponents: make([]IPhysicsComponent, 0),
 		gravity:           mgl32.Vec2{0.0, 980.0},
 		maxSpeed:          500.0,
+		collisionPairs:    make([]CollisionPair, 0),
 	}
 }
 
@@ -75,6 +92,7 @@ func (pe *PhysicsEngine) UnregisterComponent(component IPhysicsComponent) {
 
 // 更新
 func (pe *PhysicsEngine) Update(deltaTime float64) {
+	// 遍历所有注册的物理组件，更新他们的物理状态
 	for _, pc := range pe.physicsComponents {
 		if pc == nil || !pc.IsEnabled() {
 			continue
@@ -108,4 +126,50 @@ func (pe *PhysicsEngine) Update(deltaTime float64) {
 			),
 		)
 	}
+
+	// 每帧开始前先清空碰撞对切片
+	pe.collisionPairs = pe.collisionPairs[:0]
+	// 处理对象间的碰撞
+	pe.checkObjectCollisions()
+}
+
+// 检查对象间的碰撞
+func (pe *PhysicsEngine) checkObjectCollisions() {
+	// 两层循环判断所有包含碰撞组件的GameObject对是否发生碰撞
+	for i, pca := range pe.physicsComponents {
+		// 物理组件如果都没有启用，不考虑碰撞
+		if pca == nil || !pca.IsEnabled() {
+			continue
+		}
+
+		// 获取碰撞组件，如果都没有启用，不考虑碰撞
+		cca := pca.GetColliderComponent()
+		if cca == nil || !cca.IsActive() {
+			continue
+		}
+
+		for j := i + 1; j < len(pe.physicsComponents); j++ {
+			pcb := pe.physicsComponents[j]
+			if pcb == nil || !pcb.IsEnabled() {
+				continue
+			}
+
+			ccb := pcb.GetColliderComponent()
+			if ccb == nil || !ccb.IsActive() {
+				continue
+			}
+
+			// 检查碰撞
+			if checkCollision(cca, ccb) {
+				// TODO: 并不是所有碰撞都需要插入切片，比如触发器，未来会添加过滤条件
+				// 碰撞对加入切片
+				pe.collisionPairs = append(pe.collisionPairs, CollisionPair{pca.GetGameObject(), pcb.GetGameObject()})
+			}
+		}
+	}
+}
+
+// 获取碰撞组件对切片
+func (pe *PhysicsEngine) GetCollisionPairs() []CollisionPair {
+	return pe.collisionPairs
 }

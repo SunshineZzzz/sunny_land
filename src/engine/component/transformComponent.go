@@ -45,6 +45,10 @@ func (tc *TransformComponent) SetScale(scale mgl32.Vec2) {
 		if spriteComp != nil {
 			spriteComp.updateOffset()
 		}
+		colliderComp := tc.owner.GetComponent(&ColliderComponent{}).(*ColliderComponent)
+		if colliderComp != nil {
+			colliderComp.updateOffset()
+		}
 	}
 }
 

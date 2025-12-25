@@ -117,3 +117,17 @@ func (pc *PhysicsComponent) GetVelocity() mgl32.Vec2 {
 func (pc *PhysicsComponent) SetVelocity(velocity mgl32.Vec2) {
 	pc.velocity = velocity
 }
+
+// 获取碰撞组件
+func (pc *PhysicsComponent) GetColliderComponent() physics.IColliderComponent {
+	if pc.owner == nil {
+		slog.Error("physics component owner is nil")
+		return nil
+	}
+	return pc.owner.GetComponent(&ColliderComponent{}).(*ColliderComponent)
+}
+
+// 获取游戏对象
+func (pc *PhysicsComponent) GetGameObject() any {
+	return pc.GetOwner()
+}
