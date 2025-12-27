@@ -2,12 +2,13 @@ package component
 
 import (
 	"log/slog"
+
 	econtext "sunny_land/src/engine/context"
 	"sunny_land/src/engine/object"
 	"sunny_land/src/engine/render"
 	"sunny_land/src/engine/resource"
 	"sunny_land/src/engine/utils"
-	"sunny_land/src/engine/utils/math"
+	emath "sunny_land/src/engine/utils/math"
 
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
 	"github.com/go-gl/mathgl/mgl32"
@@ -115,21 +116,21 @@ func (sc *SpriteComponent) updateOffset() {
 	case utils.AlignTopLeft:
 		sc.offset = mgl32.Vec2{0.0, 0.0}
 	case utils.AlignTopCenter:
-		sc.offset = math.Mgl32Vec2MulElem(mgl32.Vec2{-sc.spriteSize.X() * 0.5, 0.0}, scale)
+		sc.offset = emath.Mgl32Vec2MulElem(mgl32.Vec2{-sc.spriteSize.X() * 0.5, 0.0}, scale)
 	case utils.AlignTopRight:
-		sc.offset = math.Mgl32Vec2MulElem(mgl32.Vec2{-sc.spriteSize.X(), 0.0}, scale)
+		sc.offset = emath.Mgl32Vec2MulElem(mgl32.Vec2{-sc.spriteSize.X(), 0.0}, scale)
 	case utils.AlignCenterLeft:
-		sc.offset = mgl32.Vec2{0.0, -sc.spriteSize.Y() * 0.5}
+		sc.offset = emath.Mgl32Vec2MulElem(mgl32.Vec2{0.0, -sc.spriteSize.Y() * 0.5}, scale)
 	case utils.AlignCenter:
-		sc.offset = math.Mgl32Vec2MulElem(mgl32.Vec2{-sc.spriteSize.X() * 0.5, -sc.spriteSize.Y() * 0.5}, scale)
+		sc.offset = emath.Mgl32Vec2MulElem(mgl32.Vec2{-sc.spriteSize.X() * 0.5, -sc.spriteSize.Y() * 0.5}, scale)
 	case utils.AlignCenterRight:
-		sc.offset = math.Mgl32Vec2MulElem(mgl32.Vec2{-sc.spriteSize.X(), -sc.spriteSize.Y() * 0.5}, scale)
+		sc.offset = emath.Mgl32Vec2MulElem(mgl32.Vec2{-sc.spriteSize.X(), -sc.spriteSize.Y() * 0.5}, scale)
 	case utils.AlignBottomLeft:
-		sc.offset = math.Mgl32Vec2MulElem(mgl32.Vec2{0.0, -sc.spriteSize.Y()}, scale)
+		sc.offset = emath.Mgl32Vec2MulElem(mgl32.Vec2{0.0, -sc.spriteSize.Y()}, scale)
 	case utils.AlignBottomCenter:
-		sc.offset = math.Mgl32Vec2MulElem(mgl32.Vec2{-sc.spriteSize.X() * 0.5, -sc.spriteSize.Y()}, scale)
+		sc.offset = emath.Mgl32Vec2MulElem(mgl32.Vec2{-sc.spriteSize.X() * 0.5, -sc.spriteSize.Y()}, scale)
 	case utils.AlignBottomRight:
-		sc.offset = math.Mgl32Vec2MulElem(mgl32.Vec2{-sc.spriteSize.X(), -sc.spriteSize.Y()}, scale)
+		sc.offset = emath.Mgl32Vec2MulElem(mgl32.Vec2{-sc.spriteSize.X(), -sc.spriteSize.Y()}, scale)
 	}
 }
 

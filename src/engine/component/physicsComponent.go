@@ -12,7 +12,7 @@ type PhysicsComponent struct {
 	// 继承基础组件
 	Component
 	// 物体速度
-	velocity mgl32.Vec2
+	Velocity mgl32.Vec2
 	// 物理引擎
 	physicsEngine *physics.PhysicsEngine
 	// 缓存对象的变换组件
@@ -110,12 +110,12 @@ func (pc *PhysicsComponent) GetTransformComponent() physics.ITransformComponent 
 
 // 获取速度
 func (pc *PhysicsComponent) GetVelocity() mgl32.Vec2 {
-	return pc.velocity
+	return pc.Velocity
 }
 
 // 设置速度
 func (pc *PhysicsComponent) SetVelocity(velocity mgl32.Vec2) {
-	pc.velocity = velocity
+	pc.Velocity = velocity
 }
 
 // 获取碰撞组件

@@ -2,6 +2,7 @@ package physics
 
 import (
 	"sunny_land/src/engine/utils/math"
+	emath "sunny_land/src/engine/utils/math"
 
 	"github.com/go-gl/mathgl/mgl32"
 )
@@ -16,6 +17,10 @@ type IColliderComponent interface {
 	GetOffset() mgl32.Vec2
 	// 是否激活
 	IsActive() bool
+	// 是否触发
+	IsTrigger() bool
+	// 获取世界AABB
+	GetWorldAABB() emath.Rect
 }
 
 // 检查两个碰撞器组件是否碰撞
@@ -27,8 +32,8 @@ func checkCollision(a, b IColliderComponent) bool {
 	bTransform := b.GetTransformComponent()
 
 	// 先计算最小包围盒是否碰撞，如果没有碰撞，直接返回false
-	aSize := math.Mgl32Vec2MulElem(aCollider.GetAABBSize(), aTransform.GetScale())
-	bSize := math.Mgl32Vec2MulElem(bCollider.GetAABBSize(), bTransform.GetScale())
+	aSize := emath.Mgl32Vec2MulElem(aCollider.GetAABBSize(), aTransform.GetScale())
+	bSize := emath.Mgl32Vec2MulElem(bCollider.GetAABBSize(), bTransform.GetScale())
 	aPos := aTransform.GetPosition().Add(a.GetOffset())
 	bPos := bTransform.GetPosition().Add(b.GetOffset())
 	if !checkAABBOverlap(aPos, aSize, bPos, bSize) {

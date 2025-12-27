@@ -2,8 +2,9 @@ package render
 
 import (
 	"log/slog"
+
 	"sunny_land/src/engine/resource"
-	"sunny_land/src/engine/utils/math"
+	emath "sunny_land/src/engine/utils/math"
 
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
 	"github.com/go-gl/mathgl/mgl32"
@@ -80,7 +81,7 @@ func (r *Renderer) DrawSprite(camera *Camera, sprite *Sprite, position, scale mg
 }
 
 // 绘制视差精灵图
-func (r *Renderer) DrawSpriteWithParallax(camera *Camera, sprite *Sprite, position, scrollFactor, scale mgl32.Vec2, repeat math.Vec2B) {
+func (r *Renderer) DrawSpriteWithParallax(camera *Camera, sprite *Sprite, position, scrollFactor, scale mgl32.Vec2, repeat emath.Vec2B) {
 	texture := r.resourceManager.GetTexture(sprite.textureId)
 	if texture == nil {
 		slog.Error("texture is nil", slog.String("textureID", sprite.textureId))
@@ -108,7 +109,7 @@ func (r *Renderer) DrawSpriteWithParallax(camera *Camera, sprite *Sprite, positi
 	if repeat.X() {
 		// 取模保证了背景的起始绘制点永远在[0, width)之间循环
 		// 减去一个宽度确保了从屏幕左边界之外就开始绘制，从而完美遮盖屏幕左侧
-		start[0] = math.Mod(positionScreen.X(), scaledTexW) - scaledTexW
+		start[0] = emath.Mod(positionScreen.X(), scaledTexW) - scaledTexW
 		// 从左侧负数坐标开始，一块接一块地向右画，直到覆盖掉屏幕最右侧的一像素为止
 		stop[0] = viewportSize.X()
 	} else {
@@ -118,7 +119,7 @@ func (r *Renderer) DrawSpriteWithParallax(camera *Camera, sprite *Sprite, positi
 	}
 	// 同上
 	if repeat.Y() {
-		start[1] = math.Mod(positionScreen.Y(), scaledTexH) - scaledTexH
+		start[1] = emath.Mod(positionScreen.Y(), scaledTexH) - scaledTexH
 		stop[1] = viewportSize.Y()
 	} else {
 		start[1] = positionScreen.Y()

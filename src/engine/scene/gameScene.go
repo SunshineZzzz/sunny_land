@@ -34,7 +34,15 @@ func (gs *GameScene) Init() {
 
 	// 加载关卡
 	NewLevelLoader().LoadLevel("assets/maps/level1.tmj", gs)
-
+	// 注册场景中的main层到物理引擎，main层会有物理属性
+	mainLayer := gs.FindGameObjectByName("main")
+	if mainLayer != nil {
+		tileLayerComp := mainLayer.GetComponent(&component.TileLayerComponent{}).(*component.TileLayerComponent)
+		if tileLayerComp != nil {
+			gs.ctx.PhysicsEngine.RegisterTileLayerComponent(tileLayerComp)
+			slog.Info("main layer registered to physics engine")
+		}
+	}
 	// 创建测试游戏对象
 	gs.createTestObject()
 
@@ -73,7 +81,7 @@ func (gs *GameScene) createTestObject() {
 	// 创建一个测试游戏对象
 	gt := object.NewGameObject("TestObject", "TestObject")
 	transformComp := component.NewTransformComponent(mgl32.Vec2{100.0, 100.0}, mgl32.Vec2{1.0, 1.0}, 0.0)
-	spriteComp := component.NewSpriteComponent("assets/textures/Props/big-crate.png", gs.ctx.ResourceManager, utils.AlignCenter, nil, false)
+	spriteComp := component.NewSpriteComponent("assets/textures/Props/big-crate.png", gs.ctx.ResourceManager, utils.AlignNone, nil, false)
 	physicsComp := component.NewPhysicsComponent(gs.ctx.PhysicsEngine, 1.0, true)
 	colliderComp := component.NewColliderComponent(physics.NewAABBCollider(mgl32.Vec2{32.0, 32.0}), utils.AlignNone, mgl32.Vec2{0.0, 0.0}, false, true)
 	gt.AddComponent(transformComp)
@@ -84,7 +92,7 @@ func (gs *GameScene) createTestObject() {
 	// 添加第二个游戏对象
 	gt2 := object.NewGameObject("TestObject2", "TestObject2")
 	transformComp2 := component.NewTransformComponent(mgl32.Vec2{50.0, 50.0}, mgl32.Vec2{1.0, 1.0}, 0.0)
-	spriteComp2 := component.NewSpriteComponent("assets/textures/Props/big-crate.png", gs.ctx.ResourceManager, utils.AlignCenter, nil, false)
+	spriteComp2 := component.NewSpriteComponent("assets/textures/Props/big-crate.png", gs.ctx.ResourceManager, utils.AlignNone, nil, false)
 	physicsComp2 := component.NewPhysicsComponent(gs.ctx.PhysicsEngine, 1.0, false)
 	colliderComp2 := component.NewColliderComponent(physics.NewCircleCollider(16.0), utils.AlignNone, mgl32.Vec2{0.0, 0.0}, false, true)
 	gt2.AddComponent(transformComp2)
@@ -127,15 +135,24 @@ func (gs *GameScene) TestObject() {
 		return
 	}
 	inputManager := gs.ctx.InputManager
-
+	physicsComp := gs.testObject.GetComponent(&component.PhysicsComponent{}).(*component.PhysicsComponent)
+	if physicsComp == nil {
+		return
+	}
 	if inputManager.IsActionDown("move_left") {
-		gs.testObject.GetComponent(&component.TransformComponent{}).(*component.TransformComponent).Translate(mgl32.Vec2{-1, 0})
+		physicsComp.Velocity[0] = -100.0
+	} else {
+		physicsComp.Velocity[0] *= 0.9
 	}
+
 	if inputManager.IsActionDown("move_right") {
-		gs.testObject.GetComponent(&component.TransformComponent{}).(*component.TransformComponent).Translate(mgl32.Vec2{1, 0})
+		physicsComp.Velocity[0] = 100.0
+	} else {
+		physicsComp.Velocity[0] *= 0.9
 	}
+
 	if inputManager.IsActionPressed("jump") {
-		gs.testObject.GetComponent(&component.PhysicsComponent{}).(*component.PhysicsComponent).SetVelocity(mgl32.Vec2{0, -400})
+		physicsComp.Velocity[1] = -400.0
 	}
 }
 

@@ -2,7 +2,9 @@ package render
 
 import (
 	"log/slog"
+
 	"sunny_land/src/engine/utils/math"
+	emath "sunny_land/src/engine/utils/math"
 
 	"github.com/go-gl/mathgl/mgl32"
 )
@@ -14,11 +16,11 @@ type Camera struct {
 	// 相机左上角的世界坐标
 	position mgl32.Vec2
 	// 限制相机在世界中的移动范围，nil表示不限制
-	limitBounds *math.Rect
+	limitBounds *emath.Rect
 }
 
 // 创建相机
-func NewCamera(viewportSize, position mgl32.Vec2, limitBounds *math.Rect) *Camera {
+func NewCamera(viewportSize, position mgl32.Vec2, limitBounds *emath.Rect) *Camera {
 	slog.Debug("create camera", slog.Any("viewportSize", viewportSize), slog.Any("position", position), slog.Any("limitBounds", limitBounds))
 	return &Camera{
 		viewportSize: viewportSize,

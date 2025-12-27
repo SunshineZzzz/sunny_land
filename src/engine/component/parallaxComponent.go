@@ -2,10 +2,12 @@ package component
 
 import (
 	"log/slog"
+
 	econtext "sunny_land/src/engine/context"
 	"sunny_land/src/engine/object"
 	"sunny_land/src/engine/render"
 	"sunny_land/src/engine/utils/math"
+	emath "sunny_land/src/engine/utils/math"
 
 	"github.com/go-gl/mathgl/mgl32"
 )
@@ -22,7 +24,7 @@ type ParallaxComponent struct {
 	// 视差滚动因子，0.0=静止, 1.0=随相机移动, <1.0=比相机慢
 	scrollFactor mgl32.Vec2
 	// 是否沿着X和Y轴周期性重复
-	repeat math.Vec2B
+	repeat emath.Vec2B
 	// 是否隐藏
 	isHidden bool
 }

@@ -4,11 +4,13 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+
 	"sunny_land/src/engine/component"
 	"sunny_land/src/engine/object"
+	"sunny_land/src/engine/physics"
 	"sunny_land/src/engine/render"
 	"sunny_land/src/engine/utils"
-	"sunny_land/src/engine/utils/math"
+	emath "sunny_land/src/engine/utils/math"
 
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
 	"github.com/bitly/go-simplejson"
@@ -145,7 +147,7 @@ func (ll *LevelLoader) loadImageLayer(layer *simplejson.Json, scene IScene) {
 	}
 
 	// 获取重复标志
-	repeat := math.Vec2B{
+	repeat := emath.Vec2B{
 		layer.Get("repeatx").MustBool(false),
 		layer.Get("repeaty").MustBool(false),
 	}
@@ -189,7 +191,7 @@ func (ll *LevelLoader) loadTileLayer(layer *simplejson.Json, scene IScene) {
 	}
 
 	// 准备瓦片信息切片，瓦片数量 = 地图宽度 * 地图高度
-	tileInfos := make([]*component.TileInfo, 0, int(ll.mapSize.X()*ll.mapSize.Y()))
+	tileInfos := make([]*physics.TileInfo, 0, int(ll.mapSize.X()*ll.mapSize.Y()))
 	// 遍历图块数据数组
 	datas := layer.Get("data")
 	for i := 0; i < len(datas.MustArray()); i++ {
@@ -211,11 +213,11 @@ func (ll *LevelLoader) loadTileLayer(layer *simplejson.Json, scene IScene) {
 }
 
 // 根据GId获取瓦片信息
-func (ll *LevelLoader) getTileInfoByGId(gId int) *component.TileInfo {
+func (ll *LevelLoader) getTileInfoByGId(gId int) *physics.TileInfo {
 	if gId == 0 {
 		// 空白瓦片
-		return &component.TileInfo{
-			Type: component.TileTypeEmpty,
+		return &physics.TileInfo{
+			Type: physics.TileTypeEmpty,
 		}
 	}
 
@@ -223,30 +225,30 @@ func (ll *LevelLoader) getTileInfoByGId(gId int) *component.TileInfo {
 	entry, found := ll.tilesetsData.Floor(gId)
 	if !found {
 		slog.Error("no tileset data for gId", slog.Int("gId", gId))
-		return &component.TileInfo{
-			Type: component.TileTypeEmpty,
+		return &physics.TileInfo{
+			Type: physics.TileTypeEmpty,
 		}
 	}
 
 	// 对应的是tiled中整张图块集中数组下标(行主序)，多张图片集合对应json数据中tiles数据对象中id等于localId的内容
 	localId := gId - entry.Key.(int)
 	// 对应的图集(整张或者多张图集)json数据
-	root := entry.Value.(*simplejson.Json)
-	tilesetPath := root.Get("file_path").MustString("")
+	tileset := entry.Value.(*simplejson.Json)
+	tilesetPath := tileset.Get("file_path").MustString("")
 	if tilesetPath == "" {
 		slog.Error("tileset path is empty", slog.Int("gId", gId))
-		return &component.TileInfo{
-			Type: component.TileTypeEmpty,
+		return &physics.TileInfo{
+			Type: physics.TileTypeEmpty,
 		}
 	}
 	// 图块集分为两种，整张图块集和多张图块集
-	if _, ok := root.CheckGet("image"); ok {
+	if _, ok := tileset.CheckGet("image"); ok {
 		// 整张图块集
 		// 获取图片路径
-		textureId := ll.resolvePath(root.Get("image").MustString(""), tilesetPath)
+		textureId := ll.resolvePath(tileset.Get("image").MustString(""), tilesetPath)
 		// 计算瓦片在图片网格中的坐标
-		coordinateX := localId % root.Get("columns").MustInt(0)
-		coordinateY := localId / root.Get("columns").MustInt(0)
+		coordinateX := localId % tileset.Get("columns").MustInt(0)
+		coordinateY := localId / tileset.Get("columns").MustInt(0)
 		// 计算瓦片在图片中的像素坐标
 		textureRect := &sdl.FRect{
 			X: ll.tileSize.X() * float32(coordinateX),
@@ -254,28 +256,29 @@ func (ll *LevelLoader) getTileInfoByGId(gId int) *component.TileInfo {
 			W: ll.tileSize.X(),
 			H: ll.tileSize.Y(),
 		}
-		// 目前只完成渲染，以后再考虑瓦片类型
-		return &component.TileInfo{
-			Type:   component.TileTypeNormal,
+		// 获取瓦片类型，只有瓦片Id，没有找到具体瓦片json
+		tileType := ll.getTileTypeByGId(tileset, localId)
+		return &physics.TileInfo{
 			Sprite: render.NewSprite(textureId, textureRect, false),
+			Type:   tileType,
 		}
 	} else {
 		// 多张图块集
-		if root.Get("tiles") == nil {
+		if tileset.Get("tiles") == nil {
 			slog.Error("tileset data for gId has no tiles", slog.Int("gId", gId))
-			return &component.TileInfo{
-				Type: component.TileTypeEmpty,
+			return &physics.TileInfo{
+				Type: physics.TileTypeEmpty,
 			}
 		}
 		// 遍历图块数据数组
-		tiles := root.Get("tiles")
+		tiles := tileset.Get("tiles")
 		for i := 0; i < len(tiles.MustArray()); i++ {
 			tile := tiles.GetIndex(i)
 			if tile.Get("id").MustInt(0) == localId {
 				if tile.Get("image") == nil {
 					slog.Error("tile data for gId has no image", slog.Int("gId", gId))
-					return &component.TileInfo{
-						Type: component.TileTypeEmpty,
+					return &physics.TileInfo{
+						Type: physics.TileTypeEmpty,
 					}
 				}
 				// 获取图片路径
@@ -290,17 +293,18 @@ func (ll *LevelLoader) getTileInfoByGId(gId int) *component.TileInfo {
 					W: float32(tile.Get("width").MustFloat64(float64(imageWidth))),
 					H: float32(tile.Get("height").MustFloat64(float64(imageHeight))),
 				}
-				// 目前只完成渲染，以后再考虑瓦片类型
-				return &component.TileInfo{
-					Type:   component.TileTypeNormal,
+				// 获取瓦片类型，根据json数据中的属性判断
+				tileType := ll.getTileTypeByJson(tile)
+				return &physics.TileInfo{
 					Sprite: render.NewSprite(textureId, textureRect, false),
+					Type:   tileType,
 				}
 			}
 		}
 	}
 	slog.Error("not find tile data for gId", slog.Int("gId", gId))
-	return &component.TileInfo{
-		Type: component.TileTypeEmpty,
+	return &physics.TileInfo{
+		Type: physics.TileTypeEmpty,
 	}
 }
 
@@ -383,4 +387,41 @@ func (ll *LevelLoader) resolvePath(relativePath, filePath string) string {
 	// 合并路径并清理(处理"."和"..")，相当于(map_dir/image_path)
 	fullPath := filepath.Join(mapDir, relativePath)
 	return fullPath
+}
+
+// 根据json数据中的属性判断瓦片类型
+func (ll *LevelLoader) getTileTypeByJson(tile *simplejson.Json) physics.TileType {
+	properties, ok := tile.CheckGet("properties")
+	if !ok {
+		return physics.TileTypeNormal
+	}
+
+	for i := 0; i < len(properties.MustArray()); i++ {
+		prop := properties.GetIndex(i)
+		if prop.Get("name").MustString("") == "solid" {
+			isSolid := prop.Get("value").MustBool(false)
+			if isSolid {
+				return physics.TileTypeSolid
+			}
+			return physics.TileTypeNormal
+		}
+	}
+	return physics.TileTypeNormal
+}
+
+// 根据瓦片Id获取瓦片类型
+func (ll *LevelLoader) getTileTypeByGId(tileset *simplejson.Json, localId int) physics.TileType {
+	tiles, ok := tileset.CheckGet("tiles")
+	if !ok {
+		return physics.TileTypeNormal
+	}
+
+	for i := 0; i < len(tiles.MustArray()); i++ {
+		tile := tiles.GetIndex(i)
+		if tile.Get("id").MustInt(0) == localId {
+			tp := ll.getTileTypeByJson(tile)
+			return tp
+		}
+	}
+	return physics.TileTypeNormal
 }

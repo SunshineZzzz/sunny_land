@@ -2,10 +2,12 @@ package component
 
 import (
 	"log/slog"
+
 	"sunny_land/src/engine/object"
 	"sunny_land/src/engine/physics"
 	"sunny_land/src/engine/utils"
 	"sunny_land/src/engine/utils/math"
+	emath "sunny_land/src/engine/utils/math"
 
 	"github.com/go-gl/mathgl/mgl32"
 )
@@ -92,21 +94,21 @@ func (c *ColliderComponent) updateOffset() {
 	case utils.AlignTopLeft:
 		c.offset = mgl32.Vec2{0.0, 0.0}
 	case utils.AlignTopCenter:
-		c.offset = math.Mgl32Vec2MulElem(mgl32.Vec2{-colliderSize.X() / 2.0, 0.0}, scale)
+		c.offset = emath.Mgl32Vec2MulElem(mgl32.Vec2{-colliderSize.X() / 2.0, 0.0}, scale)
 	case utils.AlignTopRight:
-		c.offset = math.Mgl32Vec2MulElem(mgl32.Vec2{-colliderSize.X(), 0.0}, scale)
+		c.offset = emath.Mgl32Vec2MulElem(mgl32.Vec2{-colliderSize.X(), 0.0}, scale)
 	case utils.AlignCenterLeft:
-		c.offset = math.Mgl32Vec2MulElem(mgl32.Vec2{0.0, -colliderSize.Y() / 2.0}, scale)
+		c.offset = emath.Mgl32Vec2MulElem(mgl32.Vec2{0.0, -colliderSize.Y() / 2.0}, scale)
 	case utils.AlignCenter:
-		c.offset = math.Mgl32Vec2MulElem(mgl32.Vec2{-colliderSize.X() / 2.0, -colliderSize.Y() / 2.0}, scale)
+		c.offset = emath.Mgl32Vec2MulElem(mgl32.Vec2{-colliderSize.X() / 2.0, -colliderSize.Y() / 2.0}, scale)
 	case utils.AlignCenterRight:
-		c.offset = math.Mgl32Vec2MulElem(mgl32.Vec2{colliderSize.X(), -colliderSize.Y() / 2.0}, scale)
+		c.offset = emath.Mgl32Vec2MulElem(mgl32.Vec2{colliderSize.X(), -colliderSize.Y() / 2.0}, scale)
 	case utils.AlignBottomLeft:
-		c.offset = math.Mgl32Vec2MulElem(mgl32.Vec2{0.0, -colliderSize.Y()}, scale)
+		c.offset = emath.Mgl32Vec2MulElem(mgl32.Vec2{0.0, -colliderSize.Y()}, scale)
 	case utils.AlignBottomCenter:
-		c.offset = math.Mgl32Vec2MulElem(mgl32.Vec2{-colliderSize.X() / 2.0, -colliderSize.Y()}, scale)
+		c.offset = emath.Mgl32Vec2MulElem(mgl32.Vec2{-colliderSize.X() / 2.0, -colliderSize.Y()}, scale)
 	case utils.AlignBottomRight:
-		c.offset = math.Mgl32Vec2MulElem(mgl32.Vec2{-colliderSize.X(), -colliderSize.Y()}, scale)
+		c.offset = emath.Mgl32Vec2MulElem(mgl32.Vec2{-colliderSize.X(), -colliderSize.Y()}, scale)
 	}
 }
 

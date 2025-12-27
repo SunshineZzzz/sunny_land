@@ -2,8 +2,10 @@ package physics
 
 import (
 	"log/slog"
+	"math"
 
-	"sunny_land/src/engine/utils/math"
+	"sunny_land/src/engine/render"
+	emath "sunny_land/src/engine/utils/math"
 
 	"github.com/go-gl/mathgl/mgl32"
 )
@@ -16,6 +18,8 @@ type ITransformComponent interface {
 	GetScale() mgl32.Vec2
 	// 获取位置
 	GetPosition() mgl32.Vec2
+	// 设置位置
+	SetPosition(mgl32.Vec2)
 }
 
 // 物理组件抽象
@@ -44,6 +48,34 @@ type IPhysicsComponent interface {
 	GetGameObject() any
 }
 
+// 瓦片类型
+type TileType int
+
+const (
+	// 空白瓦片
+	TileTypeEmpty TileType = iota
+	// 普通瓦片
+	TileTypeNormal
+	// 静止可放置瓦片
+	TileTypeSolid
+)
+
+// 单个瓦片信息
+type TileInfo struct {
+	// 精灵图
+	Sprite *render.Sprite
+	// 瓦片类型
+	Type TileType
+}
+
+// 瓦片图层组件抽象
+type ITileLayerComponent interface {
+	// 获取瓦片大小
+	GetTileSize() mgl32.Vec2
+	// 获取指定位置的瓦片类型，pos不是整数坐标
+	GetTileTypeAt(int, int) TileType
+}
+
 // 碰撞组件对
 type CollisionPair struct {
 	A any
@@ -54,6 +86,8 @@ type CollisionPair struct {
 type PhysicsEngine struct {
 	// 注册的物理组件容器
 	physicsComponents []IPhysicsComponent
+	// 注册的瓦片图层组件容器
+	tileLayerComponents []ITileLayerComponent
 	// 默认重力值{0.0, 980.0}，单位：像素每二次方秒，现实中是，9.8米/s^2，游戏中是，100像素 * 9.8米/s^2 = 980.0像素/s^2
 	gravity mgl32.Vec2
 	// 最大速度值{-500.0, -500.0}/{500.0, 500.0}，单位：像素/秒
@@ -90,6 +124,23 @@ func (pe *PhysicsEngine) UnregisterComponent(component IPhysicsComponent) {
 	}
 }
 
+// 注册瓦片图层组件
+func (pe *PhysicsEngine) RegisterTileLayerComponent(component ITileLayerComponent) {
+	slog.Debug("register tile layer component")
+	pe.tileLayerComponents = append(pe.tileLayerComponents, component)
+}
+
+// 移除注册瓦片图层组件
+func (pe *PhysicsEngine) UnregisterTileLayerComponent(component ITileLayerComponent) {
+	slog.Debug("remove tile layer component")
+	for i, comp := range pe.tileLayerComponents {
+		if comp == component {
+			pe.tileLayerComponents = append(pe.tileLayerComponents[:i], pe.tileLayerComponents[i+1:]...)
+			return
+		}
+	}
+}
+
 // 更新
 func (pe *PhysicsEngine) Update(deltaTime float64) {
 	// 遍历所有注册的物理组件，更新他们的物理状态
@@ -113,18 +164,8 @@ func (pe *PhysicsEngine) Update(deltaTime float64) {
 		// 清除当前帧的力
 		pc.ClearForce()
 
-		// 更新位置
-		tc := pc.GetTransformComponent()
-		tc.Translate(pc.GetVelocity().Mul(float32(deltaTime)))
-
-		// 限制最大速度
-		pc.SetVelocity(
-			math.Mgl32Vec2Clamp(
-				pc.GetVelocity(),
-				mgl32.Vec2{-pe.maxSpeed, -pe.maxSpeed},
-				mgl32.Vec2{pe.maxSpeed, pe.maxSpeed},
-			),
-		)
+		// 处理瓦片层(图块层)碰撞
+		pe.resolveTileLayerCollisions(pc, deltaTime)
 	}
 
 	// 每帧开始前先清空碰撞对切片
@@ -172,4 +213,148 @@ func (pe *PhysicsEngine) checkObjectCollisions() {
 // 获取碰撞组件对切片
 func (pe *PhysicsEngine) GetCollisionPairs() []CollisionPair {
 	return pe.collisionPairs
+}
+
+// 处理瓦片层(图块层)碰撞
+func (pe *PhysicsEngine) resolveTileLayerCollisions(pc IPhysicsComponent, deltaTime float64) {
+	if pc.GetGameObject() == nil {
+		return
+	}
+	// 获取变换组件
+	tc := pc.GetTransformComponent()
+	// 获取碰撞组件
+	cca := pc.GetColliderComponent()
+	if tc == nil || cca == nil || !cca.IsActive() || cca.IsTrigger() {
+		return
+	}
+	// 使用最小包围盒进行碰撞检测，不考虑圆形碰撞器啥的，简化
+	worldAABB := cca.GetWorldAABB()
+	// 物体的当前位置
+	objPos := worldAABB.Position
+	objSize := worldAABB.Size
+	if objSize.X() <= 0.0 || objSize.Y() <= 0.0 {
+		return
+	}
+
+	// 右下瓦片y，左下瓦片y，右下瓦片x，右上瓦片x，这些情况需要减去1个像素，避免检查到下一行/列的瓦片
+	tolerance := float32(1.0)
+	// 计算物体在dt时间内的位移
+	ds := pc.GetVelocity().Mul(float32(deltaTime))
+	// 计算物体在dt时间内的目标(期望)位置
+	newObjPos := objPos.Add(ds)
+
+	// 遍历所有注册的碰撞瓦片层
+	for _, tl := range pe.tileLayerComponents {
+		if tl == nil {
+			continue
+		}
+
+		// 获取瓦片大小
+		tileSize := tl.GetTileSize()
+		// 采用轴分离碰撞检测，如果不这样做就会出现问题，比如：
+		// 我想往右走1像素，同时往上走1像素。计算目标位置：现在的坐标(x, y)变成(x+1, y+1)。刚好(x+1, y+1)有一堵墙(碰撞)。这次移动是非法的，程序把你的坐标锁定在原地(x, y)
+		// 玩家的感受：我按着“右”和“上”，角色动都不动，像被胶水粘在了墙上。所以需要分离。处理X轴(向右走1像素)，发现(x+1, y)确实撞墙了。取消这次X轴位移，保持x不变。
+		// 处理Y轴(向上走1像素)，程序计算新位置(x, y+1)，发现上方是空的，没墙，成功移动，坐标更新为(x, y+1)。和顺序无关，甚至可以并行判断。
+		//
+		//  x轴，x坐标为期望位置，y坐标为当前位置，检测x方向是否碰撞，如果碰撞，取消X轴位移和速度
+		if ds.X() > 0.0 {
+			// 检测右侧碰撞
+			// 右上x期望坐标，需要检测右上瓦片和右下瓦片是否碰撞
+			rightTopX := newObjPos.X() + objSize.X()
+			// 右上x期望坐标对应的右上x瓦片坐标，这里不要减去tolerance，实际计算是哪个就需要判断那个瓦片x位置
+			rightTopTileX := int(math.Floor(float64(rightTopX / tileSize.X())))
+			// 右上瓦片y，这个也是不要减tolerance，实际计算是哪个就需要判断那个瓦片y位置
+			rightTopTileY := int(math.Floor(float64(objPos.Y() / tileSize.Y())))
+			// 获取右上瓦片类型
+			rightTopTileType := tl.GetTileTypeAt(rightTopTileX, rightTopTileY)
+			// 右下瓦片y，这个需要减tolerance，否则会检查到下一行的瓦片
+			rightBottomtileY := int(math.Floor(float64((objPos.Y() + objSize.Y() - tolerance) / tileSize.Y())))
+			// 获取右下瓦片类型
+			rightBottomTileType := tl.GetTileTypeAt(rightTopTileX, rightBottomtileY)
+
+			if rightTopTileType == TileTypeSolid || rightBottomTileType == TileTypeSolid {
+				// 撞墙了，速度归0
+				pc.SetVelocity(mgl32.Vec2{0.0, pc.GetVelocity().Y()})
+				// x方向移动到贴着墙壁的位置
+				newObjPos[0] = float32(rightTopTileX)*tileSize.X() - objSize.X()
+			}
+		} else if ds.X() < 0.0 {
+			// 检测左侧碰撞
+			// 左上x期望坐标，需要检测左上瓦片和左下瓦片是否碰撞
+			leftTopX := newObjPos.X()
+			// 左上x期望坐标对应的左上x瓦片坐标，这里不要减去tolerance，实际计算是哪个就需要判断那个瓦片x位置
+			leftTopTileX := int(math.Floor(float64(leftTopX / tileSize.X())))
+			// 左上瓦片y，这个也是不要减tolerance，实际计算是哪个就需要判断那个瓦片y位置
+			leftTopTileY := int(math.Floor(float64(objPos.Y() / tileSize.Y())))
+			// 获取左上瓦片类型
+			leftTopTileType := tl.GetTileTypeAt(leftTopTileX, leftTopTileY)
+			// 左下瓦片y，这个需要减tolerance，否则会检查到下一行的瓦片
+			leftBottomtileY := int(math.Floor(float64((objPos.Y() + objSize.Y() - tolerance) / tileSize.Y())))
+			// 获取左下瓦片类型
+			leftBottomTileType := tl.GetTileTypeAt(leftTopTileX, leftBottomtileY)
+
+			if leftTopTileType == TileTypeSolid || leftBottomTileType == TileTypeSolid {
+				// 撞墙了，速度归0
+				pc.SetVelocity(mgl32.Vec2{0.0, pc.GetVelocity().Y()})
+				// x方向移动到贴着墙壁的位置
+				newObjPos[0] = float32(leftTopTileX+1) * tileSize.X()
+			}
+		}
+
+		//  y轴，y坐标为期望位置，x坐标为当前位置，检测y方向是否碰撞，如果碰撞，取消Y轴位移和速度
+		if ds.Y() > 0.0 {
+			// 检测底部碰撞
+			// 左下y期望坐标，需要检测左下瓦片和右下瓦片是否碰撞
+			leftBottomY := newObjPos.Y() + objSize.Y()
+			// 左下y期望坐标对应的左下瓦片坐标，这里不要减去tolerance，实际计算是哪个就需要判断那个瓦片y位置
+			leftBottomTileY := int(math.Floor(float64(leftBottomY / tileSize.Y())))
+			// 左下瓦片x，这个也是不要减tolerance，实际计算是哪个就需要判断那个瓦片x位置
+			leftBottomTileX := int(math.Floor(float64(objPos.X() / tileSize.X())))
+			// 获取左下瓦片类型
+			leftBottomTileType := tl.GetTileTypeAt(leftBottomTileX, leftBottomTileY)
+			// 右下瓦片x，这个需要减tolerance，否则会检查到下一列的瓦片
+			rightBottomTileX := int(math.Floor(float64((objPos.X() + objSize.X() - tolerance) / tileSize.X())))
+			// 获取右下瓦片类型
+			rightBottomTileType := tl.GetTileTypeAt(rightBottomTileX, leftBottomTileY)
+
+			if leftBottomTileType == TileTypeSolid || rightBottomTileType == TileTypeSolid {
+				// 撞墙了，速度归0
+				pc.SetVelocity(mgl32.Vec2{pc.GetVelocity().X(), 0.0})
+				// y方向移动到贴着墙壁的位置
+				newObjPos[1] = float32(leftBottomTileY)*tileSize.Y() - objSize.Y()
+			}
+		} else if ds.Y() < 0.0 {
+			// 检测顶部碰撞
+			// 左上y期望坐标，需要检测左上瓦片和右上瓦片是否碰撞
+			topTopY := newObjPos.Y()
+			// 左上y期望坐标对应的左上瓦片坐标，这里不要减去tolerance，实际计算是哪个就需要判断那个瓦片y位置
+			topTopTileY := int(math.Floor(float64(topTopY / tileSize.Y())))
+			// 左上瓦片x，这个也是不要减tolerance，实际计算是哪个就需要判断那个瓦片x位置
+			topTopTileX := int(math.Floor(float64(objPos.X() / tileSize.X())))
+			// 获取左上瓦片类型
+			topTopTileType := tl.GetTileTypeAt(topTopTileX, topTopTileY)
+			// 右上瓦片x，这个需要减tolerance，否则会检查到下一列的瓦片
+			rightTopTileX := int(math.Floor(float64((objPos.X() + objSize.X() - tolerance) / tileSize.X())))
+			// 获取右上瓦片类型
+			rightTopTileType := tl.GetTileTypeAt(rightTopTileX, topTopTileY)
+
+			if topTopTileType == TileTypeSolid || rightTopTileType == TileTypeSolid {
+				// 撞墙了，速度归0
+				pc.SetVelocity(mgl32.Vec2{pc.GetVelocity().X(), 0.0})
+				// y方向移动到贴着墙壁的位置
+				newObjPos[1] = float32(topTopTileY+1) * tileSize.Y()
+			}
+		}
+
+		// 更新位置
+		tc.SetPosition(newObjPos)
+		// 限制最大速度
+		pc.SetVelocity(
+			emath.Mgl32Vec2Clamp(
+				pc.GetVelocity(),
+				mgl32.Vec2{-pe.maxSpeed, -pe.maxSpeed},
+				mgl32.Vec2{pe.maxSpeed, pe.maxSpeed},
+			),
+		)
+	}
 }

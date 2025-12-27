@@ -3,39 +3,13 @@ package component
 import (
 	"log/slog"
 	"math"
+
 	econtext "sunny_land/src/engine/context"
-	"sunny_land/src/engine/render"
+	"sunny_land/src/engine/object"
+	"sunny_land/src/engine/physics"
 
 	"github.com/go-gl/mathgl/mgl32"
 )
-
-// 瓦片类型
-type TileType int
-
-const (
-	// 空白瓦片
-	TileTypeEmpty TileType = iota
-	// 普通瓦片
-	TileTypeNormal
-	// 静止可放置瓦片
-	TileTypeSolid
-)
-
-// 单个瓦片信息
-type TileInfo struct {
-	// 精灵图
-	Sprite *render.Sprite
-	// 瓦片类型
-	Type TileType
-}
-
-// 创建单个瓦片信息
-func NewTileInfo(sprite *render.Sprite, tileType TileType) *TileInfo {
-	return &TileInfo{
-		Sprite: sprite,
-		Type:   tileType,
-	}
-}
 
 // 瓦片图层组件
 type TileLayerComponent struct {
@@ -46,16 +20,24 @@ type TileLayerComponent struct {
 	// 地图尺寸，以瓦片为单位
 	mapSize mgl32.Vec2
 	// 存储所有瓦片信息，按行主序存储，index = y * mapSize.X + x
-	tiles []*TileInfo
+	tiles []*physics.TileInfo
 	// 瓦片层在世界中的偏移量，瓦片层通常不需要缩放及旋转，因此不引入Transform组件
 	// offset 最好也保持默认的0，以免增加不必要的复杂性
 	offset mgl32.Vec2
 	// 是否隐藏
 	isHidden bool
+	// 物理引擎
+	physicsEngine *physics.PhysicsEngine
 }
 
+// 确保TileLayerComponent实现了IComponent接口
+var _ object.IComponent = (*TileLayerComponent)(nil)
+
+// 确保TileLayerComponent实现了ITileLayerComponent接口
+var _ physics.ITileLayerComponent = (*TileLayerComponent)(nil)
+
 // 创建瓦片图层组件
-func NewTileLayerComponent(tileSize mgl32.Vec2, mapSize mgl32.Vec2, tiles []*TileInfo) *TileLayerComponent {
+func NewTileLayerComponent(tileSize mgl32.Vec2, mapSize mgl32.Vec2, tiles []*physics.TileInfo) *TileLayerComponent {
 	slog.Debug("create tile layer component", slog.Any("tileSize", tileSize), slog.Any("mapSize", mapSize), slog.Int("tileCount", len(tiles)))
 	return &TileLayerComponent{
 		tileSize: tileSize,
@@ -87,7 +69,7 @@ func (tlc *TileLayerComponent) Render(context *econtext.Context) {
 			// 获取索引
 			index := y*int(tlc.mapSize.X()) + x
 			// 检查索引有效性和瓦片是否需要渲染
-			if index >= len(tlc.tiles) || tlc.tiles[index].Type == TileTypeEmpty {
+			if index >= len(tlc.tiles) || tlc.tiles[index].Type == physics.TileTypeEmpty {
 				continue
 			}
 			tileInfo := tlc.tiles[index]
@@ -108,7 +90,7 @@ func (tlc *TileLayerComponent) Render(context *econtext.Context) {
 }
 
 // 获取指定位置的瓦片信息
-func (tlc *TileLayerComponent) GetTileInfoAt(posX, posY int) *TileInfo {
+func (tlc *TileLayerComponent) GetTileInfoAt(posX, posY int) *physics.TileInfo {
 	if posX < 0 || posX >= int(tlc.mapSize.X()) || posY < 0 || posY >= int(tlc.mapSize.Y()) {
 		slog.Warn("pos out of range", slog.Int("posX", posX), slog.Int("posY", posY))
 		return nil
@@ -123,18 +105,36 @@ func (tlc *TileLayerComponent) GetTileInfoAt(posX, posY int) *TileInfo {
 }
 
 // 获取指定位置的瓦片类型，pos不是整数坐标
-func (tlc *TileLayerComponent) GetTileTypeAt(posX, posY int) TileType {
+func (tlc *TileLayerComponent) GetTileTypeAt(posX, posY int) physics.TileType {
 	tileInfo := tlc.GetTileInfoAt(posX, posY)
 	if tileInfo == nil {
-		return TileTypeEmpty
+		return physics.TileTypeEmpty
 	}
 	return tileInfo.Type
 }
 
 // 获取指定世界位置的瓦片类型
-func (tlc *TileLayerComponent) GetTileTypeAtWorldPos(posXF, posYF float32) TileType {
+func (tlc *TileLayerComponent) GetTileTypeAtWorldPos(posXF, posYF float32) physics.TileType {
 	// 先将世界位置转换为瓦片位置
 	posX := int(math.Floor(float64(posXF) / float64(tlc.tileSize.X())))
 	posY := int(math.Floor(float64(posYF) / float64(tlc.tileSize.Y())))
 	return tlc.GetTileTypeAt(posX, posY)
+}
+
+// 设置物理引擎
+func (tlc *TileLayerComponent) SetPhysicsEngine(pe *physics.PhysicsEngine) {
+	tlc.physicsEngine = pe
+}
+
+// 清理组件
+func (tlc *TileLayerComponent) Clean() {
+	if tlc.physicsEngine != nil {
+		tlc.physicsEngine.UnregisterTileLayerComponent(tlc)
+		tlc.physicsEngine = nil
+	}
+}
+
+// 获取瓦片大小
+func (tlc *TileLayerComponent) GetTileSize() mgl32.Vec2 {
+	return tlc.tileSize
 }
