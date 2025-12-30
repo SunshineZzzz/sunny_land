@@ -10,6 +10,7 @@ import (
 	"sunny_land/src/engine/physics"
 	"sunny_land/src/engine/render"
 	"sunny_land/src/engine/utils"
+	"sunny_land/src/engine/utils/def"
 	emath "sunny_land/src/engine/utils/math"
 
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
@@ -402,7 +403,7 @@ func (ll *LevelLoader) loadObjectLayer(layer *simplejson.Json, scene IScene) {
 		// 获取重力信息并设置
 		gravity := ll.getTileProperty(tileJson, "gravity")
 		if gravity != nil {
-			physicsCom := gameObject.GetComponent(&component.PhysicsComponent{}).(*component.PhysicsComponent)
+			physicsCom := gameObject.GetComponent(def.ComponentTypePhysics).(*component.PhysicsComponent)
 			if physicsCom != nil {
 				physicsCom.SetUseGravity(gravity.(bool))
 			} else {

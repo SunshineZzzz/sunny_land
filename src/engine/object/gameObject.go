@@ -2,28 +2,11 @@ package object
 
 import (
 	"log/slog"
-	"reflect"
 
 	econtext "sunny_land/src/engine/context"
+	"sunny_land/src/engine/physics"
+	"sunny_land/src/engine/utils/def"
 )
-
-// 组件接口
-type IComponent interface {
-	// 初始化组件
-	Init()
-	// 更新组件
-	Update(float64, *econtext.Context)
-	// 处理输入
-	HandleInput(*econtext.Context)
-	// 渲染
-	Render(*econtext.Context)
-	// 清理
-	Clean()
-	// 设置组件所属的游戏对象
-	SetOwner(*GameObject)
-	// 获取组件所属的游戏对象
-	GetOwner() *GameObject
-}
 
 // 游戏对象，负责管理游戏对象的组件
 type GameObject struct {
@@ -32,10 +15,13 @@ type GameObject struct {
 	// 标签
 	tag string
 	// 组件列表
-	components map[reflect.Type]IComponent
+	components map[def.ComponentType]physics.IComponent
 	// 延迟删除标识，将来由场景类负责删除
 	needRemove bool
 }
+
+// 确保GameObject实现了IGameObject接口
+var _ physics.IGameObject = (*GameObject)(nil)
 
 // 创建游戏对象
 func NewGameObject(name string, tag string) *GameObject {
@@ -43,7 +29,7 @@ func NewGameObject(name string, tag string) *GameObject {
 	return &GameObject{
 		name:       name,
 		tag:        tag,
-		components: make(map[reflect.Type]IComponent),
+		components: make(map[def.ComponentType]physics.IComponent),
 		needRemove: false,
 	}
 }
@@ -74,52 +60,49 @@ func (gt *GameObject) Clean() {
 	for _, component := range gt.components {
 		component.Clean()
 	}
-	gt.components = make(map[reflect.Type]IComponent)
+	gt.components = make(map[def.ComponentType]physics.IComponent)
 }
 
 // 添加组件
-func (gt *GameObject) AddComponent(component IComponent) {
-	componentType := reflect.TypeOf(component)
-	if _, exists := gt.components[componentType]; exists {
+func (gt *GameObject) AddComponent(component physics.IComponent) {
+	if _, exists := gt.components[component.GetType()]; exists {
 		slog.Error("component already exists in game object", slog.String("gameObject.Name", gt.name), slog.String("gameObject.Tag", gt.tag),
-			slog.String("componentType", componentType.String()))
+			slog.Any("componentType", component.GetType()))
 		return
 	}
-	gt.components[componentType] = component
+	gt.components[component.GetType()] = component
 	component.SetOwner(gt)
 	component.Init()
 	slog.Debug("add component to game object", slog.String("gameObject.Name", gt.name), slog.String("gameObject.Tag", gt.tag),
-		slog.String("componentType", componentType.String()))
+		slog.Any("componentType", component.GetType()))
 }
 
 // 获取组件
-func (gt *GameObject) GetComponent(component IComponent) IComponent {
-	componentType := reflect.TypeOf(component)
+func (gt *GameObject) GetComponent(componentType def.ComponentType) physics.IComponent {
 	if component, exists := gt.components[componentType]; exists {
 		return component
 	}
 	slog.Error("component not found in game object", slog.String("gameObject.Name", gt.name), slog.String("gameObject.Tag", gt.tag),
-		slog.String("componentType", componentType.String()))
+		slog.Any("componentType", componentType))
 	return nil
 }
 
 // 移除组件
-func (gt *GameObject) RemoveComponent(component IComponent) {
-	componentType := reflect.TypeOf(component)
-	if _, exists := gt.components[componentType]; !exists {
+func (gt *GameObject) RemoveComponent(componentType def.ComponentType) {
+	component, exists := gt.components[componentType]
+	if !exists {
 		slog.Error("component not found in game object", slog.String("gameObject.Name", gt.name), slog.String("gameObject.Tag", gt.tag),
-			slog.String("componentType", componentType.String()))
+			slog.Any("componentType", componentType))
 		return
 	}
 	component.Clean()
 	delete(gt.components, componentType)
 	slog.Debug("remove component from game object", slog.String("gameObject.Name", gt.name), slog.String("gameObject.Tag", gt.tag),
-		slog.String("componentType", componentType.String()))
+		slog.Any("componentType", componentType))
 }
 
 // 检查组件是否存在
-func (gt *GameObject) HasComponent(component IComponent) bool {
-	componentType := reflect.TypeOf(component)
+func (gt *GameObject) HasComponent(componentType def.ComponentType) bool {
 	_, exists := gt.components[componentType]
 	return exists
 }

@@ -2,9 +2,8 @@ package component
 
 import (
 	"log/slog"
-	econtext "sunny_land/src/engine/context"
-	"sunny_land/src/engine/object"
 	"sunny_land/src/engine/physics"
+	"sunny_land/src/engine/utils/def"
 
 	"github.com/go-gl/mathgl/mgl32"
 )
@@ -22,7 +21,7 @@ type TransformComponent struct {
 }
 
 // 确保TransformComponent实现了IComponent接口
-var _ object.IComponent = (*TransformComponent)(nil)
+var _ physics.IComponent = (*TransformComponent)(nil)
 
 // 确保TransformComponent实现了ITransformComponent接口
 var _ physics.ITransformComponent = (*TransformComponent)(nil)
@@ -31,6 +30,9 @@ var _ physics.ITransformComponent = (*TransformComponent)(nil)
 func NewTransformComponent(position mgl32.Vec2, scale mgl32.Vec2, rotation float64) *TransformComponent {
 	slog.Debug("create transform component", slog.Any("position", position), slog.Any("scale", scale), slog.Float64("rotation", rotation))
 	return &TransformComponent{
+		Component: Component{
+			componentType: def.ComponentTypeTransform,
+		},
 		position: position,
 		scale:    scale,
 		rotation: rotation,
@@ -41,11 +43,11 @@ func NewTransformComponent(position mgl32.Vec2, scale mgl32.Vec2, rotation float
 func (tc *TransformComponent) SetScale(scale mgl32.Vec2) {
 	tc.scale = scale
 	if tc.owner != nil {
-		spriteComp := tc.owner.GetComponent(&SpriteComponent{}).(*SpriteComponent)
+		spriteComp := tc.owner.GetComponent(def.ComponentTypeSprite).(*SpriteComponent)
 		if spriteComp != nil {
 			spriteComp.updateOffset()
 		}
-		colliderComp := tc.owner.GetComponent(&ColliderComponent{}).(*ColliderComponent)
+		colliderComp := tc.owner.GetComponent(def.ComponentTypeCollider).(*ColliderComponent)
 		if colliderComp != nil {
 			colliderComp.updateOffset()
 		}
@@ -83,5 +85,5 @@ func (tc *TransformComponent) Translate(delta mgl32.Vec2) {
 }
 
 // 更新
-func (tc *TransformComponent) Update(float64, *econtext.Context) {
+func (tc *TransformComponent) Update(float64, physics.IContext) {
 }

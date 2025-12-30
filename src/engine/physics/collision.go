@@ -7,22 +7,6 @@ import (
 	"github.com/go-gl/mathgl/mgl32"
 )
 
-// 碰撞器组件抽象
-type IColliderComponent interface {
-	// 获取碰撞器
-	GetCollider() ICollider
-	// 获取变换组件
-	GetTransformComponent() ITransformComponent
-	// 获取偏移量
-	GetOffset() mgl32.Vec2
-	// 是否激活
-	IsActive() bool
-	// 是否触发
-	IsTrigger() bool
-	// 获取世界AABB
-	GetWorldAABB() emath.Rect
-}
-
 // 检查两个碰撞器组件是否碰撞
 func checkCollision(a, b IColliderComponent) bool {
 	// 获取碰撞器

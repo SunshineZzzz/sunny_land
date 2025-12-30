@@ -2,8 +2,8 @@ package component
 
 import (
 	"log/slog"
-	"sunny_land/src/engine/object"
 	"sunny_land/src/engine/physics"
+	"sunny_land/src/engine/utils/def"
 
 	"github.com/go-gl/mathgl/mgl32"
 )
@@ -28,7 +28,7 @@ type PhysicsComponent struct {
 }
 
 // 确保SpriteComponent实现了IComponent接口
-var _ object.IComponent = (*PhysicsComponent)(nil)
+var _ physics.IComponent = (*PhysicsComponent)(nil)
 
 // 确保SpriteComponent实现了IPhysicsComponent接口
 var _ physics.IPhysicsComponent = (*PhysicsComponent)(nil)
@@ -37,6 +37,9 @@ var _ physics.IPhysicsComponent = (*PhysicsComponent)(nil)
 func NewPhysicsComponent(physicsEngine *physics.PhysicsEngine, mass float32, useGravity bool) *PhysicsComponent {
 	slog.Debug("create physics component", slog.Float64("mass", float64(mass)), slog.Bool("useGravity", useGravity))
 	return &PhysicsComponent{
+		Component: Component{
+			componentType: def.ComponentTypePhysics,
+		},
 		physicsEngine:      physicsEngine,
 		transformComponent: nil,
 		mass:               mass,
@@ -56,7 +59,7 @@ func (pc *PhysicsComponent) Init() {
 		return
 	}
 	// 从物体中获取变换组件
-	pc.transformComponent = pc.owner.GetComponent(&TransformComponent{}).(*TransformComponent)
+	pc.transformComponent = pc.owner.GetComponent(def.ComponentTypeTransform).(*TransformComponent)
 	if pc.transformComponent == nil {
 		slog.Warn("physics component transform component is nil")
 	}
@@ -121,23 +124,4 @@ func (pc *PhysicsComponent) GetVelocity() mgl32.Vec2 {
 // 设置速度
 func (pc *PhysicsComponent) SetVelocity(velocity mgl32.Vec2) {
 	pc.Velocity = velocity
-}
-
-// 获取碰撞组件
-func (pc *PhysicsComponent) GetColliderComponent() physics.IColliderComponent {
-	if pc.owner == nil {
-		slog.Error("physics component owner is nil")
-		return nil
-	}
-	return pc.owner.GetComponent(&ColliderComponent{}).(*ColliderComponent)
-}
-
-// 获取游戏对象
-func (pc *PhysicsComponent) GetGameObject() any {
-	return pc.GetOwner()
-}
-
-// 获取游戏对象标签
-func (pc *PhysicsComponent) GetGameObjectTag() string {
-	return pc.owner.GetTag()
 }

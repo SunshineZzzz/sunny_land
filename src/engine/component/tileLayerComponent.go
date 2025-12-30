@@ -4,9 +4,8 @@ import (
 	"log/slog"
 	"math"
 
-	econtext "sunny_land/src/engine/context"
-	"sunny_land/src/engine/object"
 	"sunny_land/src/engine/physics"
+	"sunny_land/src/engine/utils/def"
 
 	"github.com/go-gl/mathgl/mgl32"
 )
@@ -31,7 +30,7 @@ type TileLayerComponent struct {
 }
 
 // 确保TileLayerComponent实现了IComponent接口
-var _ object.IComponent = (*TileLayerComponent)(nil)
+var _ physics.IComponent = (*TileLayerComponent)(nil)
 
 // 确保TileLayerComponent实现了ITileLayerComponent接口
 var _ physics.ITileLayerComponent = (*TileLayerComponent)(nil)
@@ -40,6 +39,9 @@ var _ physics.ITileLayerComponent = (*TileLayerComponent)(nil)
 func NewTileLayerComponent(tileSize mgl32.Vec2, mapSize mgl32.Vec2, tiles []*physics.TileInfo) *TileLayerComponent {
 	slog.Debug("create tile layer component", slog.Any("tileSize", tileSize), slog.Any("mapSize", mapSize), slog.Int("tileCount", len(tiles)))
 	return &TileLayerComponent{
+		Component: Component{
+			componentType: def.ComponentTypeTileLayer,
+		},
 		tileSize: tileSize,
 		mapSize:  mapSize,
 		tiles:    tiles,
@@ -58,7 +60,7 @@ func (tlc *TileLayerComponent) Init() {
 }
 
 // 渲染
-func (tlc *TileLayerComponent) Render(context *econtext.Context) {
+func (tlc *TileLayerComponent) Render(context physics.IContext) {
 	if tlc.isHidden || tlc.tileSize.X() <= 0.0 || tlc.tileSize.Y() <= 0.0 {
 		return
 	}
@@ -84,7 +86,7 @@ func (tlc *TileLayerComponent) Render(context *econtext.Context) {
 				leftTopPos[1] -= (tileInfo.Sprite.GetSourceRect().H - tlc.tileSize.Y())
 			}
 			// 执行绘制
-			context.Renderer.DrawSprite(context.Camera, tileInfo.Sprite, leftTopPos, mgl32.Vec2{1.0, 1.0}, 0.0)
+			context.GetRenderer().DrawSprite(context.GetCamera(), tileInfo.Sprite, leftTopPos, mgl32.Vec2{1.0, 1.0}, 0.0)
 		}
 	}
 }

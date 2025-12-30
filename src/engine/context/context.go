@@ -23,6 +23,9 @@ type Context struct {
 	PhysicsEngine *physics.PhysicsEngine
 }
 
+// 确保实现IContext接口
+var _ physics.IContext = (*Context)(nil)
+
 // 创建上下文对象
 func NewContext(inputManager *input.InputManager, renderer *render.Renderer,
 	resourceManager *resource.ResourceManager, camera *render.Camera,
@@ -35,4 +38,14 @@ func NewContext(inputManager *input.InputManager, renderer *render.Renderer,
 		Camera:          camera,
 		PhysicsEngine:   physicsEngine,
 	}
+}
+
+// 获取渲染器
+func (c *Context) GetRenderer() *render.Renderer {
+	return c.Renderer
+}
+
+// 获取摄像机
+func (c *Context) GetCamera() *render.Camera {
+	return c.Camera
 }

@@ -3,9 +3,9 @@ package component
 import (
 	"log/slog"
 
-	econtext "sunny_land/src/engine/context"
-	"sunny_land/src/engine/object"
+	"sunny_land/src/engine/physics"
 	"sunny_land/src/engine/render"
+	"sunny_land/src/engine/utils/def"
 	"sunny_land/src/engine/utils/math"
 	emath "sunny_land/src/engine/utils/math"
 
@@ -30,12 +30,15 @@ type ParallaxComponent struct {
 }
 
 // 确保ParallaxComponent实现了IComponent接口
-var _ object.IComponent = (*ParallaxComponent)(nil)
+var _ physics.IComponent = (*ParallaxComponent)(nil)
 
 // 创建视差组件
 func NewParallaxComponent(textureId string, scrollFactor mgl32.Vec2, repeat math.Vec2B) *ParallaxComponent {
 	slog.Debug("create parallax component", slog.String("textureId", textureId), slog.Any("scrollFactor", scrollFactor), slog.Any("repeat", repeat))
 	return &ParallaxComponent{
+		Component: Component{
+			componentType: def.ComponentTypeParallax,
+		},
 		// 视差背景默认为整张图片
 		sprite:       render.NewSprite(textureId, nil, false),
 		scrollFactor: scrollFactor,
@@ -49,7 +52,7 @@ func (pc *ParallaxComponent) Init() {
 		slog.Error("parallax component owner is nil")
 		return
 	}
-	pc.transformComponent = pc.owner.GetComponent(&TransformComponent{}).(*TransformComponent)
+	pc.transformComponent = pc.owner.GetComponent(def.ComponentTypeTransform).(*TransformComponent)
 	if pc.transformComponent == nil {
 		slog.Error("parallax component transform component is nil")
 		return
@@ -57,18 +60,18 @@ func (pc *ParallaxComponent) Init() {
 }
 
 // 更新视差组件
-func (pc *ParallaxComponent) Update(float64, *econtext.Context) {
+func (pc *ParallaxComponent) Update(float64, physics.IContext) {
 }
 
 // 渲染视差组件
-func (pc *ParallaxComponent) Render(context *econtext.Context) {
+func (pc *ParallaxComponent) Render(context physics.IContext) {
 	if pc.isHidden || pc.transformComponent == nil {
 		return
 	}
 
 	// 直接调用视差滚动绘制函数
-	context.Renderer.DrawSpriteWithParallax(
-		context.Camera,
+	context.GetRenderer().DrawSpriteWithParallax(
+		context.GetCamera(),
 		pc.sprite,
 		pc.transformComponent.GetPosition(),
 		pc.scrollFactor,

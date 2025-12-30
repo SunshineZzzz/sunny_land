@@ -5,6 +5,7 @@ import (
 	"sunny_land/src/engine/component"
 	econtext "sunny_land/src/engine/context"
 	"sunny_land/src/engine/object"
+	"sunny_land/src/engine/utils/def"
 
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
 	"github.com/go-gl/mathgl/mgl32"
@@ -35,7 +36,7 @@ func (gs *GameScene) Init() {
 	// 注册场景中的main层到物理引擎，main层会有物理属性
 	mainLayer := gs.FindGameObjectByName("main")
 	if mainLayer != nil {
-		tileLayerComp := mainLayer.GetComponent(&component.TileLayerComponent{}).(*component.TileLayerComponent)
+		tileLayerComp := mainLayer.GetComponent(def.ComponentTypeTileLayer).(*component.TileLayerComponent)
 		if tileLayerComp != nil {
 			gs.ctx.PhysicsEngine.RegisterTileLayerComponent(tileLayerComp)
 			slog.Info("main layer registered to physics engine")
@@ -106,7 +107,7 @@ func (gs *GameScene) TestPlayer() {
 		return
 	}
 	inputManager := gs.ctx.InputManager
-	physicsComp := gs.playerObject.GetComponent(&component.PhysicsComponent{}).(*component.PhysicsComponent)
+	physicsComp := gs.playerObject.GetComponent(def.ComponentTypePhysics).(*component.PhysicsComponent)
 	if physicsComp == nil {
 		return
 	}

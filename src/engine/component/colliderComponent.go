@@ -3,9 +3,9 @@ package component
 import (
 	"log/slog"
 
-	"sunny_land/src/engine/object"
 	"sunny_land/src/engine/physics"
 	"sunny_land/src/engine/utils"
+	"sunny_land/src/engine/utils/def"
 	"sunny_land/src/engine/utils/math"
 	emath "sunny_land/src/engine/utils/math"
 
@@ -31,7 +31,7 @@ type ColliderComponent struct {
 }
 
 // 确保ColliderComponent实现了IComponent接口
-var _ object.IComponent = (*ColliderComponent)(nil)
+var _ physics.IComponent = (*ColliderComponent)(nil)
 
 // 确保ColliderComponent实现了IColliderComponent接口
 var _ physics.IColliderComponent = (*ColliderComponent)(nil)
@@ -41,6 +41,9 @@ func NewColliderComponent(collider physics.ICollider, align utils.Alignment, off
 	slog.Debug("NewColliderComponent", slog.Any("collider", collider), slog.Any("align", align), slog.Any("offset", offset),
 		slog.Bool("isTrigger", isTrigger), slog.Bool("isActive", isActive))
 	return &ColliderComponent{
+		Component: Component{
+			componentType: def.ComponentTypeCollider,
+		},
 		collider:  collider,
 		align:     align,
 		offset:    offset,
@@ -55,7 +58,7 @@ func (c *ColliderComponent) Init() {
 		slog.Error("ColliderComponent Init: owner is nil")
 		return
 	}
-	c.transformComponent = c.owner.GetComponent(&TransformComponent{}).(*TransformComponent)
+	c.transformComponent = c.owner.GetComponent(def.ComponentTypeTransform).(*TransformComponent)
 	if c.transformComponent == nil {
 		slog.Error("ColliderComponent Init: transform component is nil")
 		return

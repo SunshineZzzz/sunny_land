@@ -3,11 +3,11 @@ package component
 import (
 	"log/slog"
 
-	econtext "sunny_land/src/engine/context"
-	"sunny_land/src/engine/object"
+	"sunny_land/src/engine/physics"
 	"sunny_land/src/engine/render"
 	"sunny_land/src/engine/resource"
 	"sunny_land/src/engine/utils"
+	"sunny_land/src/engine/utils/def"
 	emath "sunny_land/src/engine/utils/math"
 
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
@@ -35,7 +35,7 @@ type SpriteComponent struct {
 }
 
 // 确保SpriteComponent实现了IComponent接口
-var _ object.IComponent = (*SpriteComponent)(nil)
+var _ physics.IComponent = (*SpriteComponent)(nil)
 
 // 创建精灵图组件
 func NewSpriteComponent(textureId string, resourceManager *resource.ResourceManager, alignment utils.Alignment,
@@ -46,6 +46,9 @@ func NewSpriteComponent(textureId string, resourceManager *resource.ResourceMana
 	slog.Debug("create sprite component", slog.String("textureId", textureId), slog.Any("sourceRect", sourceRect), slog.Bool("isFlipped", isFlipped),
 		slog.Any("alignment", alignment))
 	return &SpriteComponent{
+		Component: Component{
+			componentType: def.ComponentTypeSprite,
+		},
 		resourceManager: resourceManager,
 		sprite:          render.NewSprite(textureId, sourceRect, isFlipped),
 		alignment:       alignment,
@@ -64,6 +67,9 @@ func NewSpriteComponentFromSprite(sprite *render.Sprite, resourceManager *resour
 	slog.Debug("create sprite component from sprite", slog.String("textureId", sprite.GetTextureId()),
 		slog.Any("sourceRect", sprite.GetSourceRect()), slog.Bool("isFlipped", sprite.GetIsFlipped()))
 	return &SpriteComponent{
+		Component: Component{
+			componentType: def.ComponentTypeSprite,
+		},
 		resourceManager: resourceManager,
 		sprite:          sprite,
 		alignment:       alignment,
@@ -76,7 +82,7 @@ func (sc *SpriteComponent) Init() {
 		slog.Error("owner is nil")
 		return
 	}
-	sc.transformComponent = sc.owner.GetComponent(&TransformComponent{}).(*TransformComponent)
+	sc.transformComponent = sc.owner.GetComponent(def.ComponentTypeTransform).(*TransformComponent)
 	if sc.transformComponent == nil {
 		slog.Warn("transform component is nil", slog.String("owner", sc.owner.GetName()))
 		return
@@ -157,7 +163,7 @@ func (sc *SpriteComponent) SetSpriteById(textureId string, sourceRect *sdl.FRect
 }
 
 // 渲染
-func (sc *SpriteComponent) Render(context *econtext.Context) {
+func (sc *SpriteComponent) Render(context physics.IContext) {
 	if sc.isHidden || sc.transformComponent == nil || sc.resourceManager == nil {
 		return
 	}
@@ -168,9 +174,9 @@ func (sc *SpriteComponent) Render(context *econtext.Context) {
 	rotationDegrees := sc.transformComponent.GetRotation()
 
 	// 执行绘制
-	context.Renderer.DrawSprite(context.Camera, sc.sprite, transform, scale, rotationDegrees)
+	context.GetRenderer().DrawSprite(context.GetCamera(), sc.sprite, transform, scale, rotationDegrees)
 }
 
 // 更新组件状态
-func (sc *SpriteComponent) Update(float64, *econtext.Context) {
+func (sc *SpriteComponent) Update(float64, physics.IContext) {
 }

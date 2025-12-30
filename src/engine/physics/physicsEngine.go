@@ -5,13 +5,72 @@ import (
 	"math"
 
 	"sunny_land/src/engine/render"
+	"sunny_land/src/engine/utils/def"
 	emath "sunny_land/src/engine/utils/math"
 
 	"github.com/go-gl/mathgl/mgl32"
 )
 
+// 上下文抽象
+type IContext interface {
+	// 获取渲染器
+	GetRenderer() *render.Renderer
+	// 获取摄像机
+	GetCamera() *render.Camera
+}
+
+// 游戏对象抽象
+type IGameObject interface {
+	// 获取组件
+	GetComponent(def.ComponentType) IComponent
+	// 获取名字
+	GetName() string
+	// 获取标签
+	GetTag() string
+}
+
+// 组件抽象
+type IComponent interface {
+	// 获取类型
+	GetType() def.ComponentType
+	// 初始化组件
+	Init()
+	// 更新组件
+	Update(float64, IContext)
+	// 处理输入
+	HandleInput(IContext)
+	// 渲染
+	Render(IContext)
+	// 清理
+	Clean()
+	// 设置组件所属的游戏对象
+	SetOwner(IGameObject)
+	// 获取组件所属的游戏对象
+	GetOwner() IGameObject
+}
+
+// 碰撞器组件抽象
+type IColliderComponent interface {
+	// 继承组件接口
+	IComponent
+	// 获取碰撞器
+	GetCollider() ICollider
+	// 获取变换组件
+	GetTransformComponent() ITransformComponent
+	// 获取偏移量
+	GetOffset() mgl32.Vec2
+	// 是否激活
+	IsActive() bool
+	// 是否触发
+	IsTrigger() bool
+	// 获取世界AABB
+	GetWorldAABB() emath.Rect
+}
+
 // 变换组件抽象
 type ITransformComponent interface {
+	// 继承组件接口
+	IComponent
 	// 平移
 	Translate(mgl32.Vec2)
 	// 获取缩放
@@ -24,6 +83,8 @@ type ITransformComponent interface {
 
 // 物理组件抽象
 type IPhysicsComponent interface {
+	// 继承组件接口
+	IComponent
 	// 组件是否启用
 	IsEnabled() bool
 	// 组件是否受重力影响
@@ -42,12 +103,6 @@ type IPhysicsComponent interface {
 	GetVelocity() mgl32.Vec2
 	// 设置速度
 	SetVelocity(mgl32.Vec2)
-	// 获取碰撞组件
-	GetColliderComponent() IColliderComponent
-	// 获取游戏对象
-	GetGameObject() any
-	// 获取游戏对象标签
-	GetGameObjectTag() string
 }
 
 // 瓦片类型
@@ -80,8 +135,8 @@ type ITileLayerComponent interface {
 
 // 碰撞组件对
 type CollisionPair struct {
-	A any
-	B any
+	A IGameObject
+	B IGameObject
 }
 
 // 物理引擎，负责管理和模拟物理行为，碰撞检测
@@ -186,7 +241,7 @@ func (pe *PhysicsEngine) checkObjectCollisions() {
 		}
 
 		// 获取碰撞组件，如果都没有启用，不考虑碰撞
-		cca := pca.GetColliderComponent()
+		cca := pca.GetOwner().GetComponent(def.ComponentTypeCollider).(IColliderComponent)
 		if cca == nil || !cca.IsActive() {
 			continue
 		}
@@ -197,7 +252,7 @@ func (pe *PhysicsEngine) checkObjectCollisions() {
 				continue
 			}
 
-			ccb := pcb.GetColliderComponent()
+			ccb := pcb.GetOwner().GetComponent(def.ComponentTypeCollider).(IColliderComponent)
 			if ccb == nil || !ccb.IsActive() {
 				continue
 			}
@@ -206,13 +261,13 @@ func (pe *PhysicsEngine) checkObjectCollisions() {
 			if checkCollision(cca, ccb) {
 				// TODO: 并不是所有碰撞都需要插入切片，比如触发器，未来会添加过滤条件
 				// 如果是可移动物体与SOLID静态物体碰撞，直接处理位置变化，不用记录碰撞
-				if pca.GetGameObjectTag() != "solid" && pcb.GetGameObjectTag() == "solid" {
-					pe.resolveSolidObjectCollisions(pca, pcb)
-				} else if pca.GetGameObjectTag() == "solid" && pcb.GetGameObjectTag() != "solid" {
-					pe.resolveSolidObjectCollisions(pcb, pca)
+				if pca.GetOwner().GetTag() != "solid" && pcb.GetOwner().GetTag() == "solid" {
+					pe.resolveSolidObjectCollisions(pca.GetOwner(), pcb.GetOwner())
+				} else if pca.GetOwner().GetTag() == "solid" && pcb.GetOwner().GetTag() != "solid" {
+					pe.resolveSolidObjectCollisions(pcb.GetOwner(), pca.GetOwner())
 				} else {
 					// 碰撞对加入切片
-					pe.collisionPairs = append(pe.collisionPairs, CollisionPair{pca.GetGameObject(), pcb.GetGameObject()})
+					pe.collisionPairs = append(pe.collisionPairs, CollisionPair{pca.GetOwner(), pcb.GetOwner()})
 				}
 			}
 		}
@@ -226,13 +281,13 @@ func (pe *PhysicsEngine) GetCollisionPairs() []CollisionPair {
 
 // 处理瓦片层(图块层)碰撞
 func (pe *PhysicsEngine) resolveTileLayerCollisions(pc IPhysicsComponent, deltaTime float64) {
-	if pc.GetGameObject() == nil {
+	if pc.GetOwner() == nil {
 		return
 	}
 	// 获取变换组件
 	tc := pc.GetTransformComponent()
 	// 获取碰撞组件
-	cca := pc.GetColliderComponent()
+	cca := pc.GetOwner().GetComponent(def.ComponentTypeCollider).(IColliderComponent)
 	if tc == nil || cca == nil || !cca.IsActive() || cca.IsTrigger() {
 		return
 	}
@@ -371,11 +426,12 @@ func (pe *PhysicsEngine) resolveTileLayerCollisions(pc IPhysicsComponent, deltaT
 }
 
 // 处理移动物理组件(游戏对象)和固体(静态)物理组件(游戏对象)的碰撞
-func (pe *PhysicsEngine) resolveSolidObjectCollisions(movePc, solidPc IPhysicsComponent) {
+func (pe *PhysicsEngine) resolveSolidObjectCollisions(moveObj, solidObj IGameObject) {
 	// 进入这个函数前，已经检查了各个组件的有效性，因此直接计算
-	moveTc := movePc.GetTransformComponent()
-	moveCC := movePc.GetColliderComponent()
-	solidCC := solidPc.GetColliderComponent()
+	moveTC := moveObj.GetComponent(def.ComponentTypeTransform).(ITransformComponent)
+	moveCC := moveObj.GetComponent(def.ComponentTypeCollider).(IColliderComponent)
+	movePC := moveObj.GetComponent(def.ComponentTypePhysics).(IPhysicsComponent)
+	solidCC := solidObj.GetComponent(def.ComponentTypeCollider).(IColliderComponent)
 	// 这里只能获取期望位置，因为这个函数前已经处理过了物理组件和瓦片碰撞，无法获取当前帧初始位置，因此无法进行轴分离检测
 	// 未来可以重构，这里使用长宽最小平移向量解决碰撞
 	moveAABB := moveCC.GetWorldAABB()
@@ -395,34 +451,34 @@ func (pe *PhysicsEngine) resolveSolidObjectCollisions(movePc, solidPc IPhysicsCo
 		// 如果重叠部分在x方向上更小，则认为碰撞发生在x方向上，推出x方向平移向量最小
 		if moveCenter.X() < solidCenter.X() {
 			// 移动物体在固体物体的左边，让移动物体贴着固体物体的右边，y方向正常移动
-			moveTc.Translate(mgl32.Vec2{-overlap.X(), 0.0})
+			moveTC.Translate(mgl32.Vec2{-overlap.X(), 0.0})
 			// 如果速度为正(向右移动)，则速度归0，万一物体在固体物体的左边，速度为负，也归零就会被吸附
-			if movePc.GetVelocity().X() > 0.0 {
-				movePc.SetVelocity(mgl32.Vec2{0.0, movePc.GetVelocity().Y()})
+			if movePC.GetVelocity().X() > 0.0 {
+				movePC.SetVelocity(mgl32.Vec2{0.0, movePC.GetVelocity().Y()})
 			}
 		} else {
 			// 移动物体在固体物体的右边，让移动物体体贴着固体物体的左边，y方向正常移动
-			moveTc.Translate(mgl32.Vec2{overlap.X(), 0.0})
+			moveTC.Translate(mgl32.Vec2{overlap.X(), 0.0})
 			// 如果速度为负(向左移动)，则速度归0，万一物体在固体物体的右边，速度为正，也归零就会被吸附
-			if movePc.GetVelocity().X() < 0.0 {
-				movePc.SetVelocity(mgl32.Vec2{0.0, movePc.GetVelocity().Y()})
+			if movePC.GetVelocity().X() < 0.0 {
+				movePC.SetVelocity(mgl32.Vec2{0.0, movePC.GetVelocity().Y()})
 			}
 		}
 	} else {
 		// y轴方向碰撞
 		if moveCenter.Y() < solidCenter.Y() {
 			// 移动物体在固体物体的上面，让移动物体体贴着固体物体的下面，x方向正常移动
-			moveTc.Translate(mgl32.Vec2{0.0, -overlap.Y()})
+			moveTC.Translate(mgl32.Vec2{0.0, -overlap.Y()})
 			// 如果速度为正(向上移动)，则速度归0，万一物体在固体物体的上面，速度为负，也归零就会被吸附
-			if movePc.GetVelocity().Y() > 0.0 {
-				movePc.SetVelocity(mgl32.Vec2{movePc.GetVelocity().X(), 0.0})
+			if movePC.GetVelocity().Y() > 0.0 {
+				movePC.SetVelocity(mgl32.Vec2{movePC.GetVelocity().X(), 0.0})
 			}
 		} else {
 			// 移动物体在固体物体的下面，让移动物体体贴着固体物体的上面，x方向正常移动
-			moveTc.Translate(mgl32.Vec2{0.0, overlap.Y()})
+			moveTC.Translate(mgl32.Vec2{0.0, overlap.Y()})
 			// 如果速度为负(向下移动)，则速度归0，万一物体在固体物体的下面，速度为正，也归零就会被吸附
-			if movePc.GetVelocity().Y() < 0.0 {
-				movePc.SetVelocity(mgl32.Vec2{movePc.GetVelocity().X(), 0.0})
+			if movePC.GetVelocity().Y() < 0.0 {
+				movePC.SetVelocity(mgl32.Vec2{movePC.GetVelocity().X(), 0.0})
 			}
 		}
 	}
