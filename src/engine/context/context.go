@@ -41,11 +41,11 @@ func NewContext(inputManager *input.InputManager, renderer *render.Renderer,
 }
 
 // 获取渲染器
-func (c *Context) GetRenderer() *render.Renderer {
+func (c *Context) GetRenderer() physics.IRenderer {
 	return c.Renderer
 }
 
 // 获取摄像机
-func (c *Context) GetCamera() *render.Camera {
+func (c *Context) GetCamera() physics.ICamera {
 	return c.Camera
 }

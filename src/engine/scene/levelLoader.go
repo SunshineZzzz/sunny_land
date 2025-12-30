@@ -451,6 +451,31 @@ func (ll *LevelLoader) getTileTypeByJson(tile *simplejson.Json) physics.TileType
 				return physics.TileTypeSolid
 			}
 			return physics.TileTypeNormal
+		} else if prop.Get("name").MustString("") == "unisolid" {
+			isUniSolid := prop.Get("value").MustBool(false)
+			if isUniSolid {
+				return physics.TileTypeUniSolid
+			}
+			return physics.TileTypeNormal
+		} else if prop.Get("name").MustString("") == "slope" {
+			isSlope := prop.Get("value").MustString("")
+			switch isSlope {
+			case "0_1":
+				return physics.TileTypeSlope_0_1
+			case "1_0":
+				return physics.TileTypeSlope_1_0
+			case "0_2":
+				return physics.TileTypeSlope_0_2
+			case "2_1":
+				return physics.TileTypeSlope_2_1
+			case "1_2":
+				return physics.TileTypeSlope_1_2
+			case "2_0":
+				return physics.TileTypeSlope_2_0
+			default:
+				slog.Error("unknown slope type", slog.String("slope", isSlope))
+				return physics.TileTypeNormal
+			}
 		}
 	}
 	return physics.TileTypeNormal

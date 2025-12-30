@@ -3,10 +3,16 @@ package render
 import (
 	"log/slog"
 
+	"sunny_land/src/engine/physics"
 	"sunny_land/src/engine/utils/math"
 	emath "sunny_land/src/engine/utils/math"
 
 	"github.com/go-gl/mathgl/mgl32"
+)
+
+const (
+	// 相机移动距离阈值，低于该值时，相机位置直接设置到目标位置
+	SNAP_THRESHOLD = float32(1.0)
 )
 
 // 相机
@@ -17,7 +23,14 @@ type Camera struct {
 	position mgl32.Vec2
 	// 限制相机在世界中的移动范围，nil表示不限制
 	limitBounds *emath.Rect
+	// 相机跟随目标变化组件，空置表示不跟随
+	targetTC physics.ITransformComponent
+	// 相机平滑移动速度
+	smoothSpeed float32
 }
+
+// 确保Camera实现了ICamera接口
+var _ physics.ICamera = (*Camera)(nil)
 
 // 创建相机
 func NewCamera(viewportSize, position mgl32.Vec2, limitBounds *emath.Rect) *Camera {
@@ -26,6 +39,7 @@ func NewCamera(viewportSize, position mgl32.Vec2, limitBounds *emath.Rect) *Came
 		viewportSize: viewportSize,
 		position:     position,
 		limitBounds:  limitBounds,
+		smoothSpeed:  5.0,
 	}
 }
 
@@ -37,6 +51,35 @@ func (c *Camera) SetPosition(position mgl32.Vec2) {
 
 // 更新
 func (c *Camera) Update(deltaTime float64) {
+	if c.targetTC == nil {
+		return
+	}
+
+	// 计算相机目标位置
+	targetTCPos := c.targetTC.GetPosition()
+	// 目标向量与视口中心向量差值
+	desiredPos := targetTCPos.Sub(c.viewportSize.Mul(0.5))
+	// 计算相机当前位置与想要去的位置差值
+	distance := c.position.Sub(desiredPos).Len()
+
+	if distance < SNAP_THRESHOLD {
+		// 如果相机距离小于阈值，直接设置相机位置到目标位置
+		c.position = desiredPos
+	} else {
+		// 如果相机距离大于阈值，平滑移动相机位置到目标位置
+		// 这个算法应该准确的说是平滑减速
+		// 第 1 帧：你走总路程的 50%。
+		// 第 2 帧：你走剩余路程的 50%。
+		// 第 3 帧：你走剩余之剩余路程的 50%。
+		c.position = emath.Mgl32Vec2Mix(c.position, desiredPos, c.smoothSpeed*float32(deltaTime))
+		// 取整一下，要不画面撕裂
+		c.position = mgl32.Vec2{
+			mgl32.Round(c.position.X(), 0),
+			mgl32.Round(c.position.Y(), 0),
+		}
+	}
+
+	c.ClampPosition()
 }
 
 // 移动相机
@@ -67,8 +110,8 @@ func (c *Camera) ClampPosition() {
 	maxCamPos := c.limitBounds.Position.Add(c.limitBounds.Size).Sub(c.viewportSize)
 
 	// 确保maxCamPos不小于minCamPos，视口可能比世界还大
-	maxCamPos[0] = min(maxCamPos.X(), minCamPos.X())
-	maxCamPos[1] = min(maxCamPos.Y(), minCamPos.Y())
+	maxCamPos[0] = max(maxCamPos.X(), minCamPos.X())
+	maxCamPos[1] = max(maxCamPos.Y(), minCamPos.Y())
 
 	// 限制相机位置在范围内
 	c.position = math.Mgl32Vec2Clamp(c.position, minCamPos, maxCamPos)
@@ -99,4 +142,14 @@ func (c *Camera) GetViewportSize() mgl32.Vec2 {
 // 获取相机限制范围
 func (c *Camera) GetLimitBounds() *math.Rect {
 	return c.limitBounds
+}
+
+// 设置相机跟随目标
+func (c *Camera) SetTargetTC(targetTC physics.ITransformComponent) {
+	c.targetTC = targetTC
+}
+
+// 获取相机跟随目标
+func (c *Camera) GetTargetTC() physics.ITransformComponent {
+	return c.targetTC
 }

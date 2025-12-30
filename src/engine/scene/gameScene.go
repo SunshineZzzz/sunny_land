@@ -6,6 +6,7 @@ import (
 	econtext "sunny_land/src/engine/context"
 	"sunny_land/src/engine/object"
 	"sunny_land/src/engine/utils/def"
+	emath "sunny_land/src/engine/utils/math"
 
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
 	"github.com/go-gl/mathgl/mgl32"
@@ -50,6 +51,19 @@ func (gs *GameScene) Init() {
 		return
 	}
 
+	// 相机目标跟踪玩家
+	transformComp := gs.playerObject.GetComponent(def.ComponentTypeTransform).(*component.TransformComponent)
+	if transformComp != nil {
+		gs.ctx.Camera.SetTargetTC(transformComp)
+	}
+
+	// 世界大小
+	worldSize := mainLayer.GetComponent(def.ComponentTypeTileLayer).(*component.TileLayerComponent).GetWorldSize()
+	// 设置相机限制范围
+	gs.ctx.Camera.SetLimitBounds(&emath.Rect{Position: mgl32.Vec2{0.0, 0.0}, Size: worldSize})
+
+	// 设置世界边界
+	gs.ctx.PhysicsEngine.SetWorldBounds(&emath.Rect{Position: mgl32.Vec2{0.0, 0.0}, Size: worldSize})
 	slog.Debug("GameScene initialized", slog.String("sceneName", gs.sceneName))
 }
 

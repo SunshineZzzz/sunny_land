@@ -4,19 +4,49 @@ import (
 	"log/slog"
 	"math"
 
-	"sunny_land/src/engine/render"
 	"sunny_land/src/engine/utils/def"
 	emath "sunny_land/src/engine/utils/math"
 
+	"github.com/SunshineZzzz/purego-sdl3/sdl"
 	"github.com/go-gl/mathgl/mgl32"
 )
+
+// 渲染器抽象
+type IRenderer interface {
+	// 绘制视差精灵图
+	DrawSpriteWithParallax(ICamera, ISprite, mgl32.Vec2, mgl32.Vec2, mgl32.Vec2, emath.Vec2B)
+	// 绘制精灵图
+	DrawSprite(ICamera, ISprite, mgl32.Vec2, mgl32.Vec2, float64)
+}
+
+// 摄像机抽象
+type ICamera interface {
+	// 世界坐标转换为屏幕坐标(视口坐标)，考虑视差
+	// scrollFactor，视差系数，用于计算视差效果，0.0表示没有视差(固定背景)，1.0表示背景跟着相机移动，0.0~1.0之间视差
+	// 移动得越快，看起来离玩家越近, 视差系数越接近1.0。移动得越慢，看起来离玩家越远，视差系数越接近0.0
+	WorldToScreenWithParallax(mgl32.Vec2, mgl32.Vec2) mgl32.Vec2
+	// 获取相机视口大小(屏幕大小)
+	GetViewportSize() mgl32.Vec2
+	// 世界坐标转换为屏幕坐标(视口坐标)
+	WorldToScreen(mgl32.Vec2) mgl32.Vec2
+}
+
+// 精灵图抽象
+type ISprite interface {
+	// 获取要绘制的纹理部分
+	GetSourceRect() *sdl.FRect
+	// 获取纹理ID
+	GetTextureId() string
+	// 获取是否水平反转
+	GetIsFlipped() bool
+}
 
 // 上下文抽象
 type IContext interface {
 	// 获取渲染器
-	GetRenderer() *render.Renderer
+	GetRenderer() IRenderer
 	// 获取摄像机
-	GetCamera() *render.Camera
+	GetCamera() ICamera
 }
 
 // 游戏对象抽象
@@ -113,14 +143,28 @@ const (
 	TileTypeEmpty TileType = iota
 	// 普通瓦片
 	TileTypeNormal
-	// 静止可放置瓦片
+	// 静止可碰撞瓦片
 	TileTypeSolid
+	// 单向静止可碰撞瓦片
+	TileTypeUniSolid
+	// 斜坡瓦片，高度:左0 右1
+	TileTypeSlope_0_1
+	// 斜坡瓦片，高度:左1 右0
+	TileTypeSlope_1_0
+	// 斜坡瓦片，高度:左0 右1/2
+	TileTypeSlope_0_2
+	// 斜坡瓦片，高度:左1/2 右1
+	TileTypeSlope_2_1
+	// 斜坡瓦片，高度:左1 右1/2
+	TileTypeSlope_1_2
+	// 斜坡瓦片，高度:左1/2 右0
+	TileTypeSlope_2_0
 )
 
 // 单个瓦片信息
 type TileInfo struct {
 	// 精灵图
-	Sprite *render.Sprite
+	Sprite ISprite
 	// 瓦片类型
 	Type TileType
 }
@@ -151,6 +195,8 @@ type PhysicsEngine struct {
 	maxSpeed float32
 	// 存储本帧发生的碰撞组件对
 	collisionPairs []CollisionPair
+	// 世界边界，限制物体移动
+	worldBounds *emath.Rect
 }
 
 // 创建物理引擎
@@ -223,6 +269,9 @@ func (pe *PhysicsEngine) Update(deltaTime float64) {
 
 		// 处理瓦片层(图块层)碰撞
 		pe.resolveTileLayerCollisions(pc, deltaTime)
+
+		// 应用世界边界，限制物体移动范围
+		pe.ApplyWorldBounds(pc)
 	}
 
 	// 每帧开始前先清空碰撞对切片
@@ -341,6 +390,20 @@ func (pe *PhysicsEngine) resolveTileLayerCollisions(pc IPhysicsComponent, deltaT
 				pc.SetVelocity(mgl32.Vec2{0.0, pc.GetVelocity().Y()})
 				// x方向移动到贴着墙壁的位置
 				newObjPos[0] = float32(rightTopTileX)*tileSize.X() - objSize.X()
+			} else {
+				// 没有碰撞，需要检测右下角是否是斜坡瓦片
+				// 计算斜坡碰撞x的偏移量，可以利用相似三角形计算y方向的偏移量
+				widthRight := newObjPos.X() + objSize.X() - float32(rightTopTileX)*tileSize.X()
+				heightRight := pe.getTileHeightAtWidth(widthRight, rightBottomTileType, tileSize)
+				if heightRight > 0.0 {
+					// 右下瓦片下标*瓦片高度-物体高度-斜坡高度=物体在斜坡上的y坐标
+					// 假设没有斜坡，物体应该在的y坐标，再减去heightRight，就是物体在斜坡上的y坐标
+					targetY := float32(rightBottomtileY+1)*tileSize.Y() - objSize.Y() - heightRight
+					if targetY < newObjPos.Y() {
+						// 说明碰撞了
+						newObjPos[1] = targetY
+					}
+				}
 			}
 		} else if ds.X() < 0.0 {
 			// 检测左侧碰撞
@@ -362,6 +425,20 @@ func (pe *PhysicsEngine) resolveTileLayerCollisions(pc IPhysicsComponent, deltaT
 				pc.SetVelocity(mgl32.Vec2{0.0, pc.GetVelocity().Y()})
 				// x方向移动到贴着墙壁的位置
 				newObjPos[0] = float32(leftTopTileX+1) * tileSize.X()
+			} else {
+				// 没有碰撞，需要检测左下角是否是斜坡瓦片
+				// 计算斜坡碰撞x的偏移量，可以利用相似三角形计算y方向的偏移量
+				widthLeft := newObjPos.X() - float32(leftTopTileX)*tileSize.X()
+				heightLeft := pe.getTileHeightAtWidth(widthLeft, leftBottomTileType, tileSize)
+				if heightLeft > 0.0 {
+					// 左下瓦片下标*瓦片高度-物体高度-斜坡高度=物体在斜坡上的y坐标
+					// 假设没有斜坡，物体应该在的y坐标，再减去heightLeft，就是物体在斜坡上的y坐标
+					targetY := float32(leftBottomtileY+1)*tileSize.Y() - objSize.Y() - heightLeft
+					if targetY < newObjPos.Y() {
+						// 说明碰撞了
+						newObjPos[1] = targetY
+					}
+				}
 			}
 		}
 
@@ -381,11 +458,31 @@ func (pe *PhysicsEngine) resolveTileLayerCollisions(pc IPhysicsComponent, deltaT
 			// 获取右下瓦片类型
 			rightBottomTileType := tl.GetTileTypeAt(rightBottomTileX, leftBottomTileY)
 
-			if leftBottomTileType == TileTypeSolid || rightBottomTileType == TileTypeSolid {
+			if leftBottomTileType == TileTypeSolid || rightBottomTileType == TileTypeSolid ||
+				leftBottomTileType == TileTypeUniSolid || rightBottomTileType == TileTypeUniSolid {
 				// 撞墙了，速度归0
 				pc.SetVelocity(mgl32.Vec2{pc.GetVelocity().X(), 0.0})
 				// y方向移动到贴着墙壁的位置
 				newObjPos[1] = float32(leftBottomTileY)*tileSize.Y() - objSize.Y()
+			} else {
+				// 下方两个斜坡都需要检测
+				widthLeft := newObjPos.X() - float32(leftBottomTileX)*tileSize.X()
+				widthRight := newObjPos.X() + objSize.X() - float32(rightBottomTileX)*tileSize.X()
+				heightLeft := pe.getTileHeightAtWidth(widthLeft, leftBottomTileType, tileSize)
+				heightRight := pe.getTileHeightAtWidth(widthRight, rightBottomTileType, tileSize)
+				// 找到两个角点的最高点进行检测
+				height := max(heightLeft, heightRight)
+				if height > 0.0 {
+					// 左下瓦片下标*瓦片高度-物体高度-斜坡高度=物体在斜坡上的y坐标
+					// 假设没有斜坡，物体应该在的y坐标，再减去height，就是物体在斜坡上的y坐标
+					targetY := float32(leftBottomTileY+1)*tileSize.Y() - objSize.Y() - height
+					if targetY < newObjPos.Y() {
+						// 说明碰撞了
+						newObjPos[1] = targetY
+						// 只有向下运动时才需要让y速度归零
+						pc.SetVelocity(mgl32.Vec2{pc.GetVelocity().X(), 0.0})
+					}
+				}
 			}
 		} else if ds.Y() < 0.0 {
 			// 检测顶部碰撞
@@ -482,4 +579,68 @@ func (pe *PhysicsEngine) resolveSolidObjectCollisions(moveObj, solidObj IGameObj
 			}
 		}
 	}
+}
+
+// 根据宽度获取斜坡瓦片的高度
+func (pe *PhysicsEngine) getTileHeightAtWidth(width float32, tileType TileType, tileSize mgl32.Vec2) float32 {
+	relX := mgl32.Clamp(width/tileSize.X(), 0.0, 1.0)
+	switch tileType {
+	case TileTypeSlope_0_1:
+		return relX * tileSize.Y()
+	case TileTypeSlope_0_2:
+		return relX * tileSize.Y() * 0.5
+	case TileTypeSlope_2_1:
+		return relX*tileSize.Y()*0.5 + tileSize.Y()*0.5
+	case TileTypeSlope_1_0:
+		return (1.0 - relX) * tileSize.Y()
+	case TileTypeSlope_2_0:
+		return (1.0 - relX) * tileSize.Y() * 0.5
+	case TileTypeSlope_1_2:
+		return (1.0-relX)*tileSize.Y()*0.5 + tileSize.Y()*0.5
+	default:
+		return 0.0
+	}
+}
+
+// 设置世界边界
+func (pe *PhysicsEngine) SetWorldBounds(bounds *emath.Rect) {
+	pe.worldBounds = bounds
+}
+
+// 获取世界边界
+func (pe *PhysicsEngine) GetWorldBounds() *emath.Rect {
+	return pe.worldBounds
+}
+
+// 应用世界边界，限制物体移动范围
+func (pe *PhysicsEngine) ApplyWorldBounds(pc IPhysicsComponent) {
+	if pe.worldBounds == nil || pc == nil {
+		return
+	}
+
+	// 只限定左，上，右边界，不限定下边界，以碰撞盒作为判断依据
+	obj := pc.GetOwner()
+	cc := obj.GetComponent(def.ComponentTypeCollider).(IColliderComponent)
+	tc := obj.GetComponent(def.ComponentTypeTransform).(ITransformComponent)
+	worldAABB := cc.GetWorldAABB()
+	objPos := worldAABB.Position
+	objSize := worldAABB.Size
+
+	// 限制左边界
+	if objPos.X() < pe.worldBounds.Position.X() {
+		pc.SetVelocity(mgl32.Vec2{0.0, pc.GetVelocity().Y()})
+		objPos[0] = pe.worldBounds.Position.X()
+	}
+	// 限制上边界
+	if objPos.Y() < pe.worldBounds.Position.Y() {
+		pc.SetVelocity(mgl32.Vec2{pc.GetVelocity().X(), 0.0})
+		objPos[1] = pe.worldBounds.Position.Y()
+	}
+	// 限制右边界
+	if objPos.X()+objSize.X() > pe.worldBounds.Position.X()+pe.worldBounds.Size.X() {
+		pc.SetVelocity(mgl32.Vec2{0.0, pc.GetVelocity().Y()})
+		objPos[0] = pe.worldBounds.Position.X() + pe.worldBounds.Size.X() - objSize.X()
+	}
+	// 更新物体位置，因为物体碰撞盒和实际大小不一定一样，所以采用平移
+	tc.Translate(objPos.Sub(worldAABB.Position))
 }

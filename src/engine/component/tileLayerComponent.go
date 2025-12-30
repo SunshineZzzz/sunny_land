@@ -140,3 +140,8 @@ func (tlc *TileLayerComponent) Clean() {
 func (tlc *TileLayerComponent) GetTileSize() mgl32.Vec2 {
 	return tlc.tileSize
 }
+
+// 获取地图世界尺寸
+func (tlc *TileLayerComponent) GetWorldSize() mgl32.Vec2 {
+	return mgl32.Vec2{tlc.mapSize.X() * tlc.tileSize.X(), tlc.mapSize.Y() * tlc.tileSize.Y()}
+}

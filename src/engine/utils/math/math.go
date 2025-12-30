@@ -63,3 +63,17 @@ func Mgl32Vec2ABS(a, b mgl32.Vec2) mgl32.Vec2 {
 		mgl32.Abs(a.Y() - b.Y()),
 	}
 }
+
+// 2维向量的线性插值
+func Mgl32Vec2Mix(current, target mgl32.Vec2, t float32) mgl32.Vec2 {
+	// 确保 t 在 0.0 到 1.0 之间，防止过冲（可选，取决于你是否想要弹性效果）
+	if t > 1.0 {
+		t = 1.0
+	}
+	if t < 0.0 {
+		t = 0.0
+	}
+
+	// 公式：A + (B - A) * t
+	return current.Add(target.Sub(current).Mul(t))
+}

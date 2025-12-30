@@ -56,9 +56,14 @@ func NewSpriteComponent(textureId string, resourceManager *resource.ResourceMana
 }
 
 // 根据精灵图对象创建精灵图组件
-func NewSpriteComponentFromSprite(sprite *render.Sprite, resourceManager *resource.ResourceManager, alignment utils.Alignment) *SpriteComponent {
-	if sprite == nil {
+func NewSpriteComponentFromSprite(spriteAny physics.ISprite, resourceManager *resource.ResourceManager, alignment utils.Alignment) *SpriteComponent {
+	if spriteAny == nil {
 		slog.Error("sprite is nil")
+		return nil
+	}
+	sprite, ok := spriteAny.(*render.Sprite)
+	if !ok {
+		slog.Error("sprite is not render.Sprite")
 		return nil
 	}
 	if resourceManager == nil {

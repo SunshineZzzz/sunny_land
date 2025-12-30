@@ -2,6 +2,7 @@ package render
 
 import (
 	"log/slog"
+	"sunny_land/src/engine/physics"
 
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
 )
@@ -15,6 +16,9 @@ type Sprite struct {
 	// 是否水平反转
 	isFlipped bool
 }
+
+// 确保Sprite实现了ISprite接口
+var _ physics.ISprite = (*Sprite)(nil)
 
 // 创建精灵图
 func NewSprite(textureId string, sourceRect *sdl.FRect, isFlipped bool) *Sprite {
