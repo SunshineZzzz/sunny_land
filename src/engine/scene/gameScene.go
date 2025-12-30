@@ -5,8 +5,6 @@ import (
 	"sunny_land/src/engine/component"
 	econtext "sunny_land/src/engine/context"
 	"sunny_land/src/engine/object"
-	"sunny_land/src/engine/physics"
-	"sunny_land/src/engine/utils"
 
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
 	"github.com/go-gl/mathgl/mgl32"
@@ -16,8 +14,8 @@ import (
 type GameScene struct {
 	// 继承基础场景
 	scene
-	// 测试游戏对象
-	testObject *object.GameObject
+	// 保存玩家对象指针，方便访问
+	playerObject *object.GameObject
 }
 
 // 创建游戏场景
@@ -43,8 +41,13 @@ func (gs *GameScene) Init() {
 			slog.Info("main layer registered to physics engine")
 		}
 	}
-	// 创建测试游戏对象
-	gs.createTestObject()
+
+	// 获取玩家对象
+	gs.playerObject = gs.FindGameObjectByName("player")
+	if gs.playerObject == nil {
+		slog.Error("player object not found")
+		return
+	}
 
 	slog.Debug("GameScene initialized", slog.String("sceneName", gs.sceneName))
 }
@@ -53,8 +56,8 @@ func (gs *GameScene) Init() {
 func (gs *GameScene) Update(dt float64) {
 	// 测试更新摄像机
 	// gs.testCamera()
-	// 测试更新测试游戏对象
-	gs.TestObject()
+	// 测试更新玩家
+	gs.TestPlayer()
 	// 测试碰撞对
 	gs.TestCollisionPairs()
 
@@ -74,38 +77,6 @@ func (gs *GameScene) HandleInput() {
 // 清理
 func (gs *GameScene) Clean() {
 	gs.scene.Clean()
-}
-
-// 创建测试游戏对象
-func (gs *GameScene) createTestObject() {
-	// 创建一个测试游戏对象
-	gt := object.NewGameObject("TestObject", "TestObject")
-	transformComp := component.NewTransformComponent(mgl32.Vec2{100.0, 100.0}, mgl32.Vec2{1.0, 1.0}, 0.0)
-	spriteComp := component.NewSpriteComponent("assets/textures/Props/big-crate.png", gs.ctx.ResourceManager, utils.AlignNone, nil, false)
-	physicsComp := component.NewPhysicsComponent(gs.ctx.PhysicsEngine, 1.0, true)
-	colliderComp := component.NewColliderComponent(physics.NewAABBCollider(mgl32.Vec2{32.0, 32.0}), utils.AlignNone, mgl32.Vec2{0.0, 0.0}, false, true)
-	gt.AddComponent(transformComp)
-	gt.AddComponent(spriteComp)
-	gt.AddComponent(physicsComp)
-	gt.AddComponent(colliderComp)
-
-	// 添加第二个游戏对象
-	gt2 := object.NewGameObject("TestObject2", "TestObject2")
-	transformComp2 := component.NewTransformComponent(mgl32.Vec2{50.0, 50.0}, mgl32.Vec2{1.0, 1.0}, 0.0)
-	spriteComp2 := component.NewSpriteComponent("assets/textures/Props/big-crate.png", gs.ctx.ResourceManager, utils.AlignNone, nil, false)
-	physicsComp2 := component.NewPhysicsComponent(gs.ctx.PhysicsEngine, 1.0, false)
-	colliderComp2 := component.NewColliderComponent(physics.NewCircleCollider(16.0), utils.AlignNone, mgl32.Vec2{0.0, 0.0}, false, true)
-	gt2.AddComponent(transformComp2)
-	gt2.AddComponent(spriteComp2)
-	gt2.AddComponent(physicsComp2)
-	gt2.AddComponent(colliderComp2)
-
-	// 将创建好的游戏对象添加到场景中
-	gs.scene.AddGameObject(gt)
-	gs.scene.AddGameObject(gt2)
-
-	// 保存测试游戏对象
-	gs.testObject = gt
 }
 
 // 测试摄像机
@@ -130,12 +101,12 @@ func (gs *GameScene) testCamera() {
 }
 
 // 测试游戏对象
-func (gs *GameScene) TestObject() {
-	if gs.testObject == nil {
+func (gs *GameScene) TestPlayer() {
+	if gs.playerObject == nil {
 		return
 	}
 	inputManager := gs.ctx.InputManager
-	physicsComp := gs.testObject.GetComponent(&component.PhysicsComponent{}).(*component.PhysicsComponent)
+	physicsComp := gs.playerObject.GetComponent(&component.PhysicsComponent{}).(*component.PhysicsComponent)
 	if physicsComp == nil {
 		return
 	}

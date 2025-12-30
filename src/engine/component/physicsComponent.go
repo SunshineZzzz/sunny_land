@@ -81,6 +81,11 @@ func (pc *PhysicsComponent) IsUseGravity() bool {
 	return pc.useGravity
 }
 
+// 设置是否受重力影响
+func (pc *PhysicsComponent) SetUseGravity(useGravity bool) {
+	pc.useGravity = useGravity
+}
+
 // 获取质量
 func (pc *PhysicsComponent) GetMass() float32 {
 	return pc.mass
@@ -130,4 +135,9 @@ func (pc *PhysicsComponent) GetColliderComponent() physics.IColliderComponent {
 // 获取游戏对象
 func (pc *PhysicsComponent) GetGameObject() any {
 	return pc.GetOwner()
+}
+
+// 获取游戏对象标签
+func (pc *PhysicsComponent) GetGameObjectTag() string {
+	return pc.owner.GetTag()
 }

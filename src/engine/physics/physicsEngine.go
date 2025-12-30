@@ -46,6 +46,8 @@ type IPhysicsComponent interface {
 	GetColliderComponent() IColliderComponent
 	// 获取游戏对象
 	GetGameObject() any
+	// 获取游戏对象标签
+	GetGameObjectTag() string
 }
 
 // 瓦片类型
@@ -203,8 +205,15 @@ func (pe *PhysicsEngine) checkObjectCollisions() {
 			// 检查碰撞
 			if checkCollision(cca, ccb) {
 				// TODO: 并不是所有碰撞都需要插入切片，比如触发器，未来会添加过滤条件
-				// 碰撞对加入切片
-				pe.collisionPairs = append(pe.collisionPairs, CollisionPair{pca.GetGameObject(), pcb.GetGameObject()})
+				// 如果是可移动物体与SOLID静态物体碰撞，直接处理位置变化，不用记录碰撞
+				if pca.GetGameObjectTag() != "solid" && pcb.GetGameObjectTag() == "solid" {
+					pe.resolveSolidObjectCollisions(pca, pcb)
+				} else if pca.GetGameObjectTag() == "solid" && pcb.GetGameObjectTag() != "solid" {
+					pe.resolveSolidObjectCollisions(pcb, pca)
+				} else {
+					// 碰撞对加入切片
+					pe.collisionPairs = append(pe.collisionPairs, CollisionPair{pca.GetGameObject(), pcb.GetGameObject()})
+				}
 			}
 		}
 	}
@@ -347,7 +356,9 @@ func (pe *PhysicsEngine) resolveTileLayerCollisions(pc IPhysicsComponent, deltaT
 		}
 
 		// 更新位置
-		tc.SetPosition(newObjPos)
+		// tc.SetPosition(newObjPos)
+		// 不可以使用SetPosition，因为有的物体碰撞盒是有偏移量的，使用SetPosition会导致碰撞盒偏移量失效
+		tc.Translate(newObjPos.Sub(objPos))
 		// 限制最大速度
 		pc.SetVelocity(
 			emath.Mgl32Vec2Clamp(
@@ -356,5 +367,63 @@ func (pe *PhysicsEngine) resolveTileLayerCollisions(pc IPhysicsComponent, deltaT
 				mgl32.Vec2{pe.maxSpeed, pe.maxSpeed},
 			),
 		)
+	}
+}
+
+// 处理移动物理组件(游戏对象)和固体(静态)物理组件(游戏对象)的碰撞
+func (pe *PhysicsEngine) resolveSolidObjectCollisions(movePc, solidPc IPhysicsComponent) {
+	// 进入这个函数前，已经检查了各个组件的有效性，因此直接计算
+	moveTc := movePc.GetTransformComponent()
+	moveCC := movePc.GetColliderComponent()
+	solidCC := solidPc.GetColliderComponent()
+	// 这里只能获取期望位置，因为这个函数前已经处理过了物理组件和瓦片碰撞，无法获取当前帧初始位置，因此无法进行轴分离检测
+	// 未来可以重构，这里使用长宽最小平移向量解决碰撞
+	moveAABB := moveCC.GetWorldAABB()
+	solidAABB := solidCC.GetWorldAABB()
+
+	// 计算移动物理组件中心位置
+	moveCenter := moveAABB.Position.Add(moveAABB.Size.Mul(0.5))
+	solidCenter := solidAABB.Position.Add(solidAABB.Size.Mul(0.5))
+	// 计算两个包围盒的重叠部分
+	overlap := moveAABB.Size.Mul(0.5).Add(solidAABB.Size.Mul(0.5)).Sub(emath.Mgl32Vec2ABS(moveCenter, solidCenter))
+	// 如果重叠部分太小了，就认为没有碰撞
+	if overlap.X() < 0.1 && overlap.Y() < 0.1 {
+		return
+	}
+
+	if overlap.X() < overlap.Y() {
+		// 如果重叠部分在x方向上更小，则认为碰撞发生在x方向上，推出x方向平移向量最小
+		if moveCenter.X() < solidCenter.X() {
+			// 移动物体在固体物体的左边，让移动物体贴着固体物体的右边，y方向正常移动
+			moveTc.Translate(mgl32.Vec2{-overlap.X(), 0.0})
+			// 如果速度为正(向右移动)，则速度归0，万一物体在固体物体的左边，速度为负，也归零就会被吸附
+			if movePc.GetVelocity().X() > 0.0 {
+				movePc.SetVelocity(mgl32.Vec2{0.0, movePc.GetVelocity().Y()})
+			}
+		} else {
+			// 移动物体在固体物体的右边，让移动物体体贴着固体物体的左边，y方向正常移动
+			moveTc.Translate(mgl32.Vec2{overlap.X(), 0.0})
+			// 如果速度为负(向左移动)，则速度归0，万一物体在固体物体的右边，速度为正，也归零就会被吸附
+			if movePc.GetVelocity().X() < 0.0 {
+				movePc.SetVelocity(mgl32.Vec2{0.0, movePc.GetVelocity().Y()})
+			}
+		}
+	} else {
+		// y轴方向碰撞
+		if moveCenter.Y() < solidCenter.Y() {
+			// 移动物体在固体物体的上面，让移动物体体贴着固体物体的下面，x方向正常移动
+			moveTc.Translate(mgl32.Vec2{0.0, -overlap.Y()})
+			// 如果速度为正(向上移动)，则速度归0，万一物体在固体物体的上面，速度为负，也归零就会被吸附
+			if movePc.GetVelocity().Y() > 0.0 {
+				movePc.SetVelocity(mgl32.Vec2{movePc.GetVelocity().X(), 0.0})
+			}
+		} else {
+			// 移动物体在固体物体的下面，让移动物体体贴着固体物体的上面，x方向正常移动
+			moveTc.Translate(mgl32.Vec2{0.0, overlap.Y()})
+			// 如果速度为负(向下移动)，则速度归0，万一物体在固体物体的下面，速度为正，也归零就会被吸附
+			if movePc.GetVelocity().Y() < 0.0 {
+				movePc.SetVelocity(mgl32.Vec2{movePc.GetVelocity().X(), 0.0})
+			}
+		}
 	}
 }

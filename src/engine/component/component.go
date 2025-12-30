@@ -38,5 +38,3 @@ func (c *Component) SetOwner(owner *object.GameObject) {
 func (c *Component) GetOwner() *object.GameObject {
 	return c.owner
 }
-
-// 非接口实现方法

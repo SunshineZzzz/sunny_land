@@ -366,6 +366,52 @@ func (ll *LevelLoader) loadObjectLayer(layer *simplejson.Json, scene IScene) {
 		// 添加到游戏对象中
 		gameObject.AddComponent(transformCom)
 		gameObject.AddComponent(spriteCom)
+
+		// 获取对象(瓦片)json信息
+		// 1. 必然存在，因为getTileInfoByGId(gid)已经确认存在
+		// 2. 这里再次获取json，实际上检索2次，可以优化
+		tileJson := ll.getTileJsonByGId(gid)
+		// 获取碰撞信息，如果是SOLID类型，需要添加物理组件，且图形源矩形区域就是碰撞盒大小
+		if tileInfo.Type == physics.TileTypeSolid {
+			collider := physics.NewAABBCollider(srcSize)
+			colliderCom := component.NewColliderComponent(collider, utils.AlignNone, mgl32.Vec2{}, false, true)
+			// 固定(静态)物体不受重力影响
+			physicsCom := component.NewPhysicsComponent(scene.GetContext().PhysicsEngine, 1.0, false)
+			gameObject.AddComponent(colliderCom)
+			gameObject.AddComponent(physicsCom)
+			gameObject.SetTag("solid")
+		} else if rect := ll.getColliderRect(tileJson); rect != nil {
+			// 如果是非SOLID类型，检查自定义碰撞盒是否存在
+			// 如果有，添加碰撞组件
+			collider := physics.NewAABBCollider(rect.Size)
+			colliderCom := component.NewColliderComponent(collider, utils.AlignNone, mgl32.Vec2{}, false, true)
+			// 自定义包围盒的坐标相对于图片坐标，设置偏移量
+			colliderCom.SetOffset(rect.Position)
+			// 不受重力影响
+			physicsCom := component.NewPhysicsComponent(scene.GetContext().PhysicsEngine, 1.0, false)
+			gameObject.AddComponent(colliderCom)
+			gameObject.AddComponent(physicsCom)
+		}
+
+		// 获取标签信息，有的话设置
+		tag := ll.getTileProperty(tileJson, "tag")
+		if tag != nil {
+			gameObject.SetTag(tag.(string))
+		}
+
+		// 获取重力信息并设置
+		gravity := ll.getTileProperty(tileJson, "gravity")
+		if gravity != nil {
+			physicsCom := gameObject.GetComponent(&component.PhysicsComponent{}).(*component.PhysicsComponent)
+			if physicsCom != nil {
+				physicsCom.SetUseGravity(gravity.(bool))
+			} else {
+				slog.Warn("game object has no physics component", slog.String("gameObjectName", name))
+				physicsCom := component.NewPhysicsComponent(scene.GetContext().PhysicsEngine, 1.0, gravity.(bool))
+				gameObject.AddComponent(physicsCom)
+			}
+		}
+
 		// 游戏对象添加到场景中
 		scene.AddGameObject(gameObject)
 		slog.Info("add game object to scene", slog.String("gameObjectName", name))
@@ -424,4 +470,85 @@ func (ll *LevelLoader) getTileTypeByGId(tileset *simplejson.Json, localId int) p
 		}
 	}
 	return physics.TileTypeNormal
+}
+
+// 根据json数据中的属性判断是否有碰撞盒
+func (ll *LevelLoader) getColliderRect(tile *simplejson.Json) *emath.Rect {
+	objectgroup, ok := tile.CheckGet("objectgroup")
+	if !ok {
+		return nil
+	}
+
+	objects, ok := objectgroup.CheckGet("objects")
+	if !ok {
+		return nil
+	}
+
+	// 一个图片只支持一个碰撞盒，如果有多个，则返回第一个不为空的
+	for i := 0; i < len(objects.MustArray()); i++ {
+		object := objects.GetIndex(i)
+		rect := emath.Rect{
+			Position: mgl32.Vec2{
+				float32(object.Get("x").MustFloat64(0)),
+				float32(object.Get("y").MustFloat64(0)),
+			},
+			Size: mgl32.Vec2{
+				float32(object.Get("width").MustFloat64(0)),
+				float32(object.Get("height").MustFloat64(0)),
+			},
+		}
+		if rect.Size.X() > 0 && rect.Size.Y() > 0 {
+			return &rect
+		}
+	}
+	return nil
+}
+
+// 根据gid获取瓦片json
+func (ll *LevelLoader) getTileJsonByGId(gId int) *simplejson.Json {
+	if gId == 0 {
+		// 空白瓦片
+		return nil
+	}
+
+	// 返回第一个小于等于gId的元素
+	entry, found := ll.tilesetsData.Floor(gId)
+	if !found {
+		slog.Error("no tileset data for gId", slog.Int("gId", gId))
+		return nil
+	}
+
+	// 对应的是tiled中整张图块集中数组下标(行主序)，多张图片集合对应json数据中tiles数据对象中id等于localId的内容
+	localId := gId - entry.Key.(int)
+	// 对应的图集(整张或者多张图集)json数据
+	tileset := entry.Value.(*simplejson.Json)
+	// 这里不用考虑整张图块集
+	tiles, ok := tileset.CheckGet("tiles")
+	if !ok {
+		return nil
+	}
+	// 遍历图块集中的每个图块，找到id等于localId的图块
+	for i := 0; i < len(tiles.MustArray()); i++ {
+		tile := tiles.GetIndex(i)
+		if tile.Get("id").MustInt(0) == localId {
+			return tile
+		}
+	}
+	return nil
+}
+
+// 根据json数据中的属性获取属性值
+func (ll *LevelLoader) getTileProperty(tileJson *simplejson.Json, propName string) any {
+	properties, ok := tileJson.CheckGet("properties")
+	if !ok {
+		return nil
+	}
+
+	for i := 0; i < len(properties.MustArray()); i++ {
+		prop := properties.GetIndex(i)
+		if prop.Get("name").MustString("") == propName {
+			return prop.Get("value").Interface()
+		}
+	}
+	return nil
 }

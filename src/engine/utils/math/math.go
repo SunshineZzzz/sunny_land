@@ -55,3 +55,11 @@ func Mod[T Number](x, y T) T {
 	res := float64(x) - float64(y)*math.Floor(float64(x)/float64(y))
 	return T(res)
 }
+
+// 2维向量的绝对值
+func Mgl32Vec2ABS(a, b mgl32.Vec2) mgl32.Vec2 {
+	return mgl32.Vec2{
+		mgl32.Abs(a.X() - b.X()),
+		mgl32.Abs(a.Y() - b.Y()),
+	}
+}

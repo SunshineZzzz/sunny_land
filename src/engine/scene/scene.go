@@ -35,6 +35,8 @@ type IScene interface {
 	IsInitialized() bool
 	// 获取资源管理器
 	GetResourceManager() *resource.ResourceManager
+	// 获取上下文
+	GetContext() *econtext.Context
 }
 
 // 基础场景
@@ -252,4 +254,9 @@ func (s *scene) FindGameObjectByName(name string) *object.GameObject {
 // 获取资源管理器
 func (s *scene) GetResourceManager() *resource.ResourceManager {
 	return s.ctx.ResourceManager
+}
+
+// 获取上下文
+func (s *scene) GetContext() *econtext.Context {
+	return s.ctx
 }
