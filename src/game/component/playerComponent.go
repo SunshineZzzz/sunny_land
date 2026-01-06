@@ -22,6 +22,8 @@ type PlayerComponent struct {
 	transformCom *eComponent.TransformComponent
 	// 动画组件
 	animationCom *eComponent.AnimationComponent
+	// 生命值组件
+	healthCom *eComponent.HealthComponent
 	// 当前状态机
 	currentState state.IPlayerState
 	// 是否死亡
@@ -35,6 +37,9 @@ type PlayerComponent struct {
 	frictionFactor float32
 	// 跳跃速度(像素每秒)
 	jumpSpeed float32
+	// 属性相关参数
+	// 玩家被击中后的硬直时间(单位：秒)
+	stunnedDuration float64
 }
 
 // 确保玩家组件实现了IPlayerComponent接口
@@ -49,10 +54,11 @@ func NewPlayerComponent() *PlayerComponent {
 		Component: eComponent.Component{
 			ComponentType: def.ComponentTypePlayer,
 		},
-		moveForce:      200.0,
-		maxSpeed:       120.0,
-		frictionFactor: 0.85,
-		jumpSpeed:      350.0,
+		moveForce:       200.0,
+		maxSpeed:        120.0,
+		frictionFactor:  0.85,
+		jumpSpeed:       350.0,
+		stunnedDuration: 0.4,
 	}
 }
 
@@ -68,9 +74,10 @@ func (p *PlayerComponent) Init() {
 	p.spriteCom = p.GetOwner().GetComponent(def.ComponentTypeSprite).(*eComponent.SpriteComponent)
 	p.transformCom = p.GetOwner().GetComponent(def.ComponentTypeTransform).(*eComponent.TransformComponent)
 	p.animationCom = p.GetOwner().GetComponent(def.ComponentTypeAnimation).(*eComponent.AnimationComponent)
+	p.healthCom = p.GetOwner().GetComponent(def.ComponentTypeHealth).(*eComponent.HealthComponent)
 
-	if p.physicsCom == nil || p.spriteCom == nil || p.transformCom == nil || p.animationCom == nil {
-		slog.Error("player component init failed, physicsCom or spriteCom or transformCom or animationCom is nil")
+	if p.physicsCom == nil || p.spriteCom == nil || p.transformCom == nil || p.animationCom == nil || p.healthCom == nil {
+		slog.Error("player component init failed, physicsCom or spriteCom or transformCom or animationCom or healthCom is nil")
 		return
 	}
 
@@ -78,6 +85,30 @@ func (p *PlayerComponent) Init() {
 	p.SetState(state.NewIdleState(p))
 
 	slog.Debug("player component init success")
+}
+
+// 试图造成伤害，返回是否成功
+func (p *PlayerComponent) TakeDamage(damage int) bool {
+	if p.isDead || p.healthCom == nil || damage <= 0 {
+		return false
+	}
+
+	success := p.healthCom.TakeDamage(damage)
+	if !success {
+		return false
+	}
+
+	// 成功造成伤害了，根据是否存活决定状态切换
+	if p.healthCom.IsAlive() {
+		// 如果存活，切换到受伤状态
+		p.SetState(state.NewHurtState(p))
+	} else {
+		p.isDead = true
+		// 如果死亡了，切换到死亡状态
+		p.SetState(state.NewDeadState(p))
+	}
+
+	return true
 }
 
 // 设置状态
@@ -140,6 +171,11 @@ func (p *PlayerComponent) GetAnimationComponent() *eComponent.AnimationComponent
 	return p.animationCom
 }
 
+// 获取生命值组件
+func (p *PlayerComponent) GetHealthComponent() *eComponent.HealthComponent {
+	return p.healthCom
+}
+
 // 获取摩擦系数
 func (p *PlayerComponent) GetFrictionFactor() float32 {
 	return p.frictionFactor
@@ -188,4 +224,14 @@ func (p *PlayerComponent) SetJumpSpeed(jumpSpeed float32) {
 // 获取跳跃速度
 func (p *PlayerComponent) GetJumpSpeed() float32 {
 	return p.jumpSpeed
+}
+
+// 获取玩家被击中后的硬直时间
+func (p *PlayerComponent) GetStunnedDuration() float64 {
+	return p.stunnedDuration
+}
+
+// 设置玩家被击中后的硬直时间
+func (p *PlayerComponent) SetStunnedDuration(stunnedDuration float64) {
+	p.stunnedDuration = stunnedDuration
 }

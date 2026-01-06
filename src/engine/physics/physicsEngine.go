@@ -180,6 +180,12 @@ type IPhysicsComponent interface {
 	HasCollidedRight() bool
 }
 
+// 健康组件抽象
+type IHealthComponent interface {
+	// 继承组件接口
+	IComponent
+}
+
 // 瓦片类型
 type TileType int
 
@@ -385,7 +391,7 @@ func (pe *PhysicsEngine) resolveTileLayerCollisions(pc IPhysicsComponent, deltaT
 	tc := pc.GetTransformComponent()
 	// 获取碰撞组件
 	cca := pc.GetOwner().GetComponent(def.ComponentTypeCollider).(IColliderComponent)
-	if tc == nil || cca == nil || !cca.IsActive() || cca.IsTrigger() {
+	if tc == nil || cca == nil || cca.IsTrigger() {
 		return
 	}
 	// 使用最小包围盒进行碰撞检测，不考虑圆形碰撞器啥的，简化
@@ -403,6 +409,19 @@ func (pe *PhysicsEngine) resolveTileLayerCollisions(pc IPhysicsComponent, deltaT
 	ds := pc.GetVelocity().Mul(float32(deltaTime))
 	// 计算物体在dt时间内的目标(期望)位置
 	newObjPos := objPos.Add(ds)
+
+	// 如果碰撞器未激活，直接让物体正常移动，然后返回
+	if !cca.IsActive() {
+		tc.Translate(ds)
+		pc.SetVelocity(
+			emath.Mgl32Vec2Clamp(
+				pc.GetVelocity(),
+				mgl32.Vec2{-pe.maxSpeed, -pe.maxSpeed},
+				mgl32.Vec2{pe.maxSpeed, pe.maxSpeed},
+			),
+		)
+		return
+	}
 
 	// 遍历所有注册的碰撞瓦片层
 	for _, tl := range pe.tileLayerComponents {

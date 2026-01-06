@@ -175,9 +175,20 @@ func (gs *GameScene) Render() {
 // 处理事件
 func (gs *GameScene) HandleInput() {
 	gs.scene.HandleInput()
+	// 测试玩家健康值
+	gs.testHealth()
 }
 
 // 清理
 func (gs *GameScene) Clean() {
 	gs.scene.Clean()
+}
+
+// 测试玩家健康值
+func (gs *GameScene) testHealth() {
+	inputManager := gs.GetContext().InputManager
+	if inputManager.IsActionPressed("attack") {
+		playerCom := gs.playerObject.GetComponent(def.ComponentTypePlayer).(*gcomponent.PlayerComponent)
+		playerCom.TakeDamage(1)
+	}
 }

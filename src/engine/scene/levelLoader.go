@@ -464,6 +464,21 @@ func (ll *LevelLoader) loadObjectLayer(layer *simplejson.Json, scene IScene) {
 			ll.addAnimation(animationJson, animationCom, srcSize)
 		}
 
+		// 获取生命值信息并且设置
+		health := ll.getTileProperty(tileJson, "health")
+		if health != nil {
+			healthInt, err := health.(json.Number).Int64()
+			if err != nil {
+				slog.Error("parse health json number failed", slog.String("layerName", layer.Get("name").MustString("Unnamed")), slog.String("error", err.Error()))
+				continue
+			}
+			healthCom := component.NewHealthComponent(int(healthInt), 2.0)
+			if gameObject.AddComponent(healthCom) == nil {
+				slog.Error("add health component failed", slog.String("layerName", layer.Get("name").MustString("Unnamed")))
+				continue
+			}
+		}
+
 		// 游戏对象添加到场景中
 		scene.AddGameObject(gameObject)
 		slog.Info("add game object to scene", slog.String("gameObjectName", name))

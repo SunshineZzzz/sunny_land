@@ -17,8 +17,11 @@ const (
 	ComponentTypeCollider
 	// 视差组件
 	ComponentTypeParallax
-	// 玩家组件
-	ComponentTypePlayer
 	// 动画组件
 	ComponentTypeAnimation
+	// 健康组件
+	ComponentTypeHealth
+
+	// 玩家组件
+	ComponentTypePlayer
 )

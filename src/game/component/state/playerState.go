@@ -26,6 +26,8 @@ type IPlayerComponent interface {
 	GetJumpSpeed() float32
 	// 获取最大水平速度
 	GetMaxSpeed() float32
+	// 获取硬直时间
+	GetStunnedDuration() float64
 }
 
 // 玩家状态机抽象

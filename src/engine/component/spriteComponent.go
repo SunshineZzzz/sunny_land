@@ -190,3 +190,8 @@ func (sc *SpriteComponent) Update(float64, physics.IContext) {
 func (sc *SpriteComponent) SetIsFliped(isFlipped bool) {
 	sc.sprite.SetIsFlipped(isFlipped)
 }
+
+// 获取是否反转
+func (sc *SpriteComponent) GetIsFliped() bool {
+	return sc.sprite.GetIsFlipped()
+}
