@@ -1,6 +1,7 @@
 package scene
 
 import (
+	"encoding/json"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -443,9 +444,83 @@ func (ll *LevelLoader) loadObjectLayer(layer *simplejson.Json, scene IScene) {
 			}
 		}
 
+		// 获取动画信息并且设置
+		animation := ll.getTileProperty(tileJson, "animation")
+		if animation != nil {
+			// 解析成json对象
+			animationJson, err := simplejson.NewJson([]byte(animation.(string)))
+			if err != nil {
+				slog.Error("parse animation json failed", slog.String("layerName", layer.Get("name").MustString("Unnamed")), slog.String("error", err.Error()))
+				continue
+			}
+			// 创建动画组件
+			animationCom := component.NewAnimationComponent()
+			// 添加动画组件到游戏对象中
+			if gameObject.AddComponent(animationCom) == nil {
+				slog.Error("add animation component failed", slog.String("layerName", layer.Get("name").MustString("Unnamed")))
+				continue
+			}
+			// 添加动画到动画组件中
+			ll.addAnimation(animationJson, animationCom, srcSize)
+		}
+
 		// 游戏对象添加到场景中
 		scene.AddGameObject(gameObject)
 		slog.Info("add game object to scene", slog.String("gameObjectName", name))
+	}
+}
+
+/**
+ * @brief 添加动画到指定的 AnimationComponent。
+ * @param anim_json 动画json数据（自定义）
+ * @param ac AnimationComponent 指针（动画添加到此组件）
+ * @param sprite_size 每一帧动画的尺寸
+ */
+func (ll *LevelLoader) addAnimation(animJson *simplejson.Json, ac *component.AnimationComponent, spriteSize mgl32.Vec2) {
+	if animJson == nil {
+		slog.Error("animation json is nil")
+		return
+	}
+
+	// 遍历动画JSON对象中的每个键值对(动画名称:动画信息)
+	for animName := range animJson.MustMap() {
+		animInfo := animJson.Get(animName)
+		// 获取每帧动画的持续时间，默认持续时间为100毫秒
+		durationMS := animInfo.Get("duration").MustInt(100)
+		// 转化为秒
+		duration := float64(durationMS) / 1000.0
+		// 获取动画帧对应的行，默认为0行
+		row := animInfo.Get("row").MustInt(0)
+		// 帧信息(数组)是必须存在的
+		frames, ok := animInfo.CheckGet("frames")
+		if !ok || len(frames.MustArray()) == 0 {
+			slog.Error("animation json has no frames", slog.String("animationName", animName))
+			continue
+		}
+		// 创建一个动画对象，默认循环播放
+		animation := render.NewAnimation(animName, true)
+		// 添加每帧动画到动画对象中
+		for _, frame := range frames.MustArray() {
+			columNumber, ok := frame.(json.Number)
+			if !ok {
+				slog.Error("animation frams format error", slog.String("animationName", animName))
+				continue
+			}
+			column, err := columNumber.Int64()
+			if err != nil {
+				slog.Error("animation frams format error", slog.String("animationName", animName))
+				continue
+			}
+			// 添加帧到动画对象中
+			animation.AddFrame(&sdl.FRect{
+				X: float32(column) * spriteSize.X(),
+				Y: float32(row) * spriteSize.Y(),
+				W: spriteSize.X(),
+				H: spriteSize.Y(),
+			}, duration)
+		}
+		// 将动画对象添加到动画组件中
+		ac.AddAnimation(animation)
 	}
 }
 

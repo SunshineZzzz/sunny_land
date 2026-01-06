@@ -26,6 +26,8 @@ func NewJumpState(playerCom IPlayerComponent) *JumpState {
 
 // 进入状态
 func (js *JumpState) Enter() {
+	// 播放跳跃动画
+	js.PlayAnimation("jump")
 	physicsCom := js.playerCom.GetPhysicsComponent()
 	// 向上跳跃
 	physicsCom.Velocity[1] = -js.playerCom.GetJumpSpeed()

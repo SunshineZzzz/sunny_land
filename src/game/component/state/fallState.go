@@ -26,6 +26,8 @@ func NewFallState(playerCom IPlayerComponent) *FallState {
 
 // 进入状态
 func (fs *FallState) Enter() {
+	// 播放下落动画
+	fs.PlayAnimation("fall")
 }
 
 // 离开状态

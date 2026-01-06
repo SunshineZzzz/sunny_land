@@ -1,8 +1,11 @@
 package state
 
 import (
+	"log/slog"
+
 	eComponent "sunny_land/src/engine/component"
 	"sunny_land/src/engine/physics"
+	"sunny_land/src/engine/utils/def"
 )
 
 // 玩家组件接口，定义玩家组件需要实现的方法
@@ -41,4 +44,20 @@ type IPlayerState interface {
 type playerState struct {
 	// 玩家组件
 	playerCom IPlayerComponent
+}
+
+// 播放指定名称的动画
+func (p *playerState) PlayAnimation(animationName string) {
+	if p.playerCom == nil {
+		slog.Error("player state play animation failed, playerCom is nil")
+		return
+	}
+
+	animationCom := p.playerCom.GetOwner().GetComponent(def.ComponentTypeAnimation).(*eComponent.AnimationComponent)
+	if animationCom == nil {
+		slog.Error("player state play animation failed, animationCom is nil")
+		return
+	}
+
+	animationCom.PlayAnimation(animationName)
 }

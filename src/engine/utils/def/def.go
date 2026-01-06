@@ -19,4 +19,6 @@ const (
 	ComponentTypeParallax
 	// 玩家组件
 	ComponentTypePlayer
+	// 动画组件
+	ComponentTypeAnimation
 )

@@ -47,6 +47,13 @@ func (gs *GameScene) Init() {
 		return
 	}
 
+	// 初始化敌人和道具
+	if !gs.InitEnemiesAndItem() {
+		slog.Error("enemies and item init failed")
+		gs.GetContext().InputManager.SetShouldQuit(true)
+		return
+	}
+
 	slog.Debug("GameScene initialized", slog.String("sceneName", gs.sceneName))
 }
 
@@ -112,6 +119,47 @@ func (gs *GameScene) InitPlayer() bool {
 
 	slog.Debug("player object transform component set to camera target")
 	return true
+}
+
+// 初始化敌人和道具
+func (gs *GameScene) InitEnemiesAndItem() bool {
+	success := true
+	for e := gs.GameObjects.Front(); e != nil; e = e.Next() {
+		gt := e.Value.(*object.GameObject)
+		switch gt.GetName() {
+		case "eagle":
+			ac := gt.GetComponent(def.ComponentTypeAnimation).(*component.AnimationComponent)
+			if ac == nil {
+				slog.Error("eagle object animation component not found")
+				success = false
+			}
+			ac.PlayAnimation("fly")
+		case "frog":
+			ac := gt.GetComponent(def.ComponentTypeAnimation).(*component.AnimationComponent)
+			if ac == nil {
+				slog.Error("frog object animation component not found")
+				success = false
+			}
+			ac.PlayAnimation("idle")
+		case "opossum":
+			ac := gt.GetComponent(def.ComponentTypeAnimation).(*component.AnimationComponent)
+			if ac == nil {
+				slog.Error("opossum object animation component not found")
+				success = false
+			}
+			ac.PlayAnimation("walk")
+		}
+
+		if gt.GetTag() == "item" {
+			ac := gt.GetComponent(def.ComponentTypeAnimation).(*component.AnimationComponent)
+			if ac == nil {
+				slog.Error("item object animation component not found")
+				success = false
+			}
+			ac.PlayAnimation("idle")
+		}
+	}
+	return success
 }
 
 // 更新

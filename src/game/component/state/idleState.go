@@ -24,6 +24,8 @@ func NewIdleState(playerCom IPlayerComponent) *IdleState {
 
 // 进入状态
 func (is *IdleState) Enter() {
+	// 播放空闲动画
+	is.PlayAnimation("idle")
 }
 
 // 更新状态

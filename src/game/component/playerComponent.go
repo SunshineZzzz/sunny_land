@@ -20,6 +20,8 @@ type PlayerComponent struct {
 	spriteCom *eComponent.SpriteComponent
 	// 变换组件
 	transformCom *eComponent.TransformComponent
+	// 动画组件
+	animationCom *eComponent.AnimationComponent
 	// 当前状态机
 	currentState state.IPlayerState
 	// 是否死亡
@@ -65,9 +67,10 @@ func (p *PlayerComponent) Init() {
 	p.physicsCom = p.GetOwner().GetComponent(def.ComponentTypePhysics).(*eComponent.PhysicsComponent)
 	p.spriteCom = p.GetOwner().GetComponent(def.ComponentTypeSprite).(*eComponent.SpriteComponent)
 	p.transformCom = p.GetOwner().GetComponent(def.ComponentTypeTransform).(*eComponent.TransformComponent)
+	p.animationCom = p.GetOwner().GetComponent(def.ComponentTypeAnimation).(*eComponent.AnimationComponent)
 
-	if p.physicsCom == nil || p.spriteCom == nil || p.transformCom == nil {
-		slog.Error("player component init failed, physicsCom or spriteCom or transformCom is nil")
+	if p.physicsCom == nil || p.spriteCom == nil || p.transformCom == nil || p.animationCom == nil {
+		slog.Error("player component init failed, physicsCom or spriteCom or transformCom or animationCom is nil")
 		return
 	}
 
@@ -130,6 +133,11 @@ func (p *PlayerComponent) GetSpriteComponent() *eComponent.SpriteComponent {
 // 获取物理组件
 func (p *PlayerComponent) GetPhysicsComponent() *eComponent.PhysicsComponent {
 	return p.physicsCom
+}
+
+// 获取动画组件
+func (p *PlayerComponent) GetAnimationComponent() *eComponent.AnimationComponent {
+	return p.animationCom
 }
 
 // 获取摩擦系数

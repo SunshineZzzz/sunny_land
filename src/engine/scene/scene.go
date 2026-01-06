@@ -50,7 +50,7 @@ type scene struct {
 	// 是否初始化
 	initialized bool
 	// 场景中的游戏对象容器
-	gameObjects *list.List
+	GameObjects *list.List
 	// 待添加的游戏对象容器，延迟添加
 	pendingAdditions []*object.GameObject
 }
@@ -64,7 +64,7 @@ func buildScene(s *scene, sceneName string, ctx *econtext.Context, sceneManager 
 	s.ctx = ctx
 	s.sceneManager = sceneManager
 	s.initialized = false
-	s.gameObjects = list.New()
+	s.GameObjects = list.New()
 	s.pendingAdditions = make([]*object.GameObject, 0)
 }
 
@@ -90,12 +90,12 @@ func (s *scene) Update(dt float64) {
 	s.ctx.Camera.Update(dt)
 
 	// 更新所有游戏对象，并删除需要移除的对象
-	for e := s.gameObjects.Front(); e != nil; {
+	for e := s.GameObjects.Front(); e != nil; {
 		next := e.Next()
 
 		gt := e.Value.(*object.GameObject)
 		if gt.NeedRemove() {
-			s.gameObjects.Remove(e)
+			s.GameObjects.Remove(e)
 			gt.Clean()
 		} else {
 			gt.Update(dt, s.ctx)
@@ -111,7 +111,7 @@ func (s *scene) Update(dt float64) {
 // 处理待添加(延时添加)的游戏对象
 func (s *scene) processPendingAdditions() {
 	for _, gt := range s.pendingAdditions {
-		s.gameObjects.PushBack(gt)
+		s.GameObjects.PushBack(gt)
 	}
 	s.pendingAdditions = make([]*object.GameObject, 0)
 }
@@ -123,7 +123,7 @@ func (s *scene) Render() {
 		return
 	}
 	// 渲染所有游戏对象
-	for e := s.gameObjects.Front(); e != nil; e = e.Next() {
+	for e := s.GameObjects.Front(); e != nil; e = e.Next() {
 		gt := e.Value.(*object.GameObject)
 		gt.Render(s.ctx)
 	}
@@ -137,12 +137,12 @@ func (s *scene) HandleInput() {
 	}
 
 	// 处理所有游戏对象的输入事件, 并删除需要移除的对象
-	for e := s.gameObjects.Front(); e != nil; {
+	for e := s.GameObjects.Front(); e != nil; {
 		next := e.Next()
 
 		gt := e.Value.(*object.GameObject)
 		if gt.NeedRemove() {
-			s.gameObjects.Remove(e)
+			s.GameObjects.Remove(e)
 			gt.Clean()
 		} else {
 			gt.HandleInput(s.ctx)
@@ -161,11 +161,11 @@ func (s *scene) Clean() {
 	s.initialized = false
 
 	// 清理所有游戏对象
-	for e := s.gameObjects.Front(); e != nil; e = e.Next() {
+	for e := s.GameObjects.Front(); e != nil; e = e.Next() {
 		gt := e.Value.(*object.GameObject)
 		gt.Clean()
 	}
-	s.gameObjects.Init()
+	s.GameObjects.Init()
 	slog.Debug("Scene cleaned", slog.String("sceneName", s.sceneName))
 }
 
@@ -179,7 +179,7 @@ func (s *scene) AddGameObject(gt *object.GameObject) {
 		slog.Warn("GameObject is nil", slog.String("sceneName", s.sceneName))
 		return
 	}
-	s.gameObjects.PushBack(gt)
+	s.GameObjects.PushBack(gt)
 }
 
 // 安全地添加游戏对象，添加到pending_additions中
@@ -206,9 +206,9 @@ func (s *scene) RemoveGameObject(gt *object.GameObject) {
 		return
 	}
 
-	for e := s.gameObjects.Front(); e != nil; e = e.Next() {
+	for e := s.GameObjects.Front(); e != nil; e = e.Next() {
 		if e.Value.(*object.GameObject) == gt {
-			s.gameObjects.Remove(e)
+			s.GameObjects.Remove(e)
 			gt.Clean()
 			slog.Debug("GameObject removed", slog.String("sceneName", s.sceneName), slog.String("gameObjectName", gt.GetName()))
 			return
@@ -243,7 +243,7 @@ func (s *scene) FindGameObjectByName(name string) *object.GameObject {
 		return nil
 	}
 
-	for e := s.gameObjects.Front(); e != nil; e = e.Next() {
+	for e := s.GameObjects.Front(); e != nil; e = e.Next() {
 		gt := e.Value.(*object.GameObject)
 		if gt.GetName() == name {
 			return gt

@@ -42,6 +42,28 @@ type ISprite interface {
 	GetIsFlipped() bool
 }
 
+// 代表动画中的单个帧
+type AnimationFrame struct {
+	// 纹理图集上此帧的区域
+	SourceRect *sdl.FRect
+	// 此帧的显示时间(秒)
+	Duration float64
+}
+
+// 动画抽象
+type IAnimation interface {
+	// 检查动画是否没有帧
+	IsEmpty() bool
+	// 获取在给定时间点应该显示的动画帧
+	GetFrameAtTime(float64) *AnimationFrame
+	// 是否循环播放
+	IsLooping() bool
+	// 获取动画总持续时间(秒)
+	GetTotalDuration() float64
+	// 获取动画名称
+	GetName() string
+}
+
 // 上下文抽象
 type IContext interface {
 	// 获取渲染器
@@ -60,6 +82,8 @@ type IGameObject interface {
 	GetName() string
 	// 获取标签
 	GetTag() string
+	// 设置是否需要删除
+	SetNeedRemove(bool)
 }
 
 // 组件抽象

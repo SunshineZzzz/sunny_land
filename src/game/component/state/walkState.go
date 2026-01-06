@@ -26,6 +26,8 @@ func NewWalkState(playerCom IPlayerComponent) *WalkState {
 
 // 进入状态
 func (ws *WalkState) Enter() {
+	// 播放步行动画
+	ws.PlayAnimation("walk")
 }
 
 // 离开状态
