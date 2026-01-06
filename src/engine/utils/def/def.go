@@ -17,4 +17,6 @@ const (
 	ComponentTypeCollider
 	// 视差组件
 	ComponentTypeParallax
+	// 玩家组件
+	ComponentTypePlayer
 )

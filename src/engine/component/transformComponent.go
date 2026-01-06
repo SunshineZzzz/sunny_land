@@ -31,7 +31,7 @@ func NewTransformComponent(position mgl32.Vec2, scale mgl32.Vec2, rotation float
 	slog.Debug("create transform component", slog.Any("position", position), slog.Any("scale", scale), slog.Float64("rotation", rotation))
 	return &TransformComponent{
 		Component: Component{
-			componentType: def.ComponentTypeTransform,
+			ComponentType: def.ComponentTypeTransform,
 		},
 		position: position,
 		scale:    scale,
@@ -42,12 +42,12 @@ func NewTransformComponent(position mgl32.Vec2, scale mgl32.Vec2, rotation float
 // 设置缩放
 func (tc *TransformComponent) SetScale(scale mgl32.Vec2) {
 	tc.scale = scale
-	if tc.owner != nil {
-		spriteComp := tc.owner.GetComponent(def.ComponentTypeSprite).(*SpriteComponent)
+	if tc.Owner != nil {
+		spriteComp := tc.Owner.GetComponent(def.ComponentTypeSprite).(*SpriteComponent)
 		if spriteComp != nil {
 			spriteComp.updateOffset()
 		}
-		colliderComp := tc.owner.GetComponent(def.ComponentTypeCollider).(*ColliderComponent)
+		colliderComp := tc.Owner.GetComponent(def.ComponentTypeCollider).(*ColliderComponent)
 		if colliderComp != nil {
 			colliderComp.updateOffset()
 		}

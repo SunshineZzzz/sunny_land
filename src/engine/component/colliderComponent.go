@@ -42,7 +42,7 @@ func NewColliderComponent(collider physics.ICollider, align utils.Alignment, off
 		slog.Bool("isTrigger", isTrigger), slog.Bool("isActive", isActive))
 	return &ColliderComponent{
 		Component: Component{
-			componentType: def.ComponentTypeCollider,
+			ComponentType: def.ComponentTypeCollider,
 		},
 		collider:  collider,
 		align:     align,
@@ -54,11 +54,11 @@ func NewColliderComponent(collider physics.ICollider, align utils.Alignment, off
 
 // 初始化
 func (c *ColliderComponent) Init() {
-	if c.owner == nil {
+	if c.Owner == nil {
 		slog.Error("ColliderComponent Init: owner is nil")
 		return
 	}
-	c.transformComponent = c.owner.GetComponent(def.ComponentTypeTransform).(*TransformComponent)
+	c.transformComponent = c.Owner.GetComponent(def.ComponentTypeTransform).(*TransformComponent)
 	if c.transformComponent == nil {
 		slog.Error("ColliderComponent Init: transform component is nil")
 		return

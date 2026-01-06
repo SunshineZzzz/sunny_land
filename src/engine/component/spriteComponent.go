@@ -47,7 +47,7 @@ func NewSpriteComponent(textureId string, resourceManager *resource.ResourceMana
 		slog.Any("alignment", alignment))
 	return &SpriteComponent{
 		Component: Component{
-			componentType: def.ComponentTypeSprite,
+			ComponentType: def.ComponentTypeSprite,
 		},
 		resourceManager: resourceManager,
 		sprite:          render.NewSprite(textureId, sourceRect, isFlipped),
@@ -73,7 +73,7 @@ func NewSpriteComponentFromSprite(spriteAny physics.ISprite, resourceManager *re
 		slog.Any("sourceRect", sprite.GetSourceRect()), slog.Bool("isFlipped", sprite.GetIsFlipped()))
 	return &SpriteComponent{
 		Component: Component{
-			componentType: def.ComponentTypeSprite,
+			ComponentType: def.ComponentTypeSprite,
 		},
 		resourceManager: resourceManager,
 		sprite:          sprite,
@@ -83,13 +83,13 @@ func NewSpriteComponentFromSprite(spriteAny physics.ISprite, resourceManager *re
 
 // 初始化
 func (sc *SpriteComponent) Init() {
-	if sc.owner == nil {
+	if sc.Owner == nil {
 		slog.Error("owner is nil")
 		return
 	}
-	sc.transformComponent = sc.owner.GetComponent(def.ComponentTypeTransform).(*TransformComponent)
+	sc.transformComponent = sc.Owner.GetComponent(def.ComponentTypeTransform).(*TransformComponent)
 	if sc.transformComponent == nil {
-		slog.Warn("transform component is nil", slog.String("owner", sc.owner.GetName()))
+		slog.Warn("transform component is nil", slog.String("owner", sc.Owner.GetName()))
 		return
 	}
 
@@ -184,4 +184,9 @@ func (sc *SpriteComponent) Render(context physics.IContext) {
 
 // 更新组件状态
 func (sc *SpriteComponent) Update(float64, physics.IContext) {
+}
+
+// 设置是否反转
+func (sc *SpriteComponent) SetIsFliped(isFlipped bool) {
+	sc.sprite.SetIsFlipped(isFlipped)
 }

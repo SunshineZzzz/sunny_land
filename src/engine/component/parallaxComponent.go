@@ -37,7 +37,7 @@ func NewParallaxComponent(textureId string, scrollFactor mgl32.Vec2, repeat math
 	slog.Debug("create parallax component", slog.String("textureId", textureId), slog.Any("scrollFactor", scrollFactor), slog.Any("repeat", repeat))
 	return &ParallaxComponent{
 		Component: Component{
-			componentType: def.ComponentTypeParallax,
+			ComponentType: def.ComponentTypeParallax,
 		},
 		// 视差背景默认为整张图片
 		sprite:       render.NewSprite(textureId, nil, false),
@@ -48,11 +48,11 @@ func NewParallaxComponent(textureId string, scrollFactor mgl32.Vec2, repeat math
 
 // 初始化
 func (pc *ParallaxComponent) Init() {
-	if pc.owner == nil {
+	if pc.Owner == nil {
 		slog.Error("parallax component owner is nil")
 		return
 	}
-	pc.transformComponent = pc.owner.GetComponent(def.ComponentTypeTransform).(*TransformComponent)
+	pc.transformComponent = pc.Owner.GetComponent(def.ComponentTypeTransform).(*TransformComponent)
 	if pc.transformComponent == nil {
 		slog.Error("parallax component transform component is nil")
 		return

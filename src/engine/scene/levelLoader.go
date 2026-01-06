@@ -158,8 +158,14 @@ func (ll *LevelLoader) loadImageLayer(layer *simplejson.Json, scene IScene) {
 	// 依次添加变换组件，视差组件
 	transformComp := component.NewTransformComponent(offset, mgl32.Vec2{1.0, 1.0}, 0.0)
 	parallaxComp := component.NewParallaxComponent(textureId, scrollFactor, repeat)
-	gameObject.AddComponent(transformComp)
-	gameObject.AddComponent(parallaxComp)
+	if gameObject.AddComponent(transformComp) == nil {
+		slog.Error("add transform component failed", slog.String("layerName", layerName))
+		return
+	}
+	if gameObject.AddComponent(parallaxComp) == nil {
+		slog.Error("add parallax component failed", slog.String("layerName", layerName))
+		return
+	}
 	// 添加到场景中
 	scene.AddGameObject(gameObject)
 	slog.Info("image layer loaded", slog.String("layerName", layerName))
@@ -207,7 +213,10 @@ func (ll *LevelLoader) loadTileLayer(layer *simplejson.Json, scene IScene) {
 	// 创建瓦片图层组件
 	tileLayerComp := component.NewTileLayerComponent(ll.tileSize, ll.mapSize, tileInfos)
 	// 游戏对象添加组件
-	gameObject.AddComponent(tileLayerComp)
+	if gameObject.AddComponent(tileLayerComp) == nil {
+		slog.Error("add tile layer component failed", slog.String("layerName", layerName))
+		return
+	}
 	// 游戏对象添加到场景中
 	scene.AddGameObject(gameObject)
 	slog.Info("tile layer loaded", slog.String("layerName", layerName))
@@ -365,8 +374,14 @@ func (ll *LevelLoader) loadObjectLayer(layer *simplejson.Json, scene IScene) {
 		// 创建渲染组件
 		spriteCom := component.NewSpriteComponentFromSprite(tileInfo.Sprite, scene.GetResourceManager(), utils.AlignNone)
 		// 添加到游戏对象中
-		gameObject.AddComponent(transformCom)
-		gameObject.AddComponent(spriteCom)
+		if gameObject.AddComponent(transformCom) == nil {
+			slog.Error("add transform component failed", slog.String("layerName", layer.Get("name").MustString("Unnamed")))
+			continue
+		}
+		if gameObject.AddComponent(spriteCom) == nil {
+			slog.Error("add sprite component failed", slog.String("layerName", layer.Get("name").MustString("Unnamed")))
+			continue
+		}
 
 		// 获取对象(瓦片)json信息
 		// 1. 必然存在，因为getTileInfoByGId(gid)已经确认存在
@@ -378,8 +393,14 @@ func (ll *LevelLoader) loadObjectLayer(layer *simplejson.Json, scene IScene) {
 			colliderCom := component.NewColliderComponent(collider, utils.AlignNone, mgl32.Vec2{}, false, true)
 			// 固定(静态)物体不受重力影响
 			physicsCom := component.NewPhysicsComponent(scene.GetContext().PhysicsEngine, 1.0, false)
-			gameObject.AddComponent(colliderCom)
-			gameObject.AddComponent(physicsCom)
+			if gameObject.AddComponent(colliderCom) == nil {
+				slog.Error("add collider component failed", slog.String("layerName", layer.Get("name").MustString("Unnamed")))
+				continue
+			}
+			if gameObject.AddComponent(physicsCom) == nil {
+				slog.Error("add physics component failed", slog.String("layerName", layer.Get("name").MustString("Unnamed")))
+				continue
+			}
 			gameObject.SetTag("solid")
 		} else if rect := ll.getColliderRect(tileJson); rect != nil {
 			// 如果是非SOLID类型，检查自定义碰撞盒是否存在
@@ -390,8 +411,14 @@ func (ll *LevelLoader) loadObjectLayer(layer *simplejson.Json, scene IScene) {
 			colliderCom.SetOffset(rect.Position)
 			// 不受重力影响
 			physicsCom := component.NewPhysicsComponent(scene.GetContext().PhysicsEngine, 1.0, false)
-			gameObject.AddComponent(colliderCom)
-			gameObject.AddComponent(physicsCom)
+			if gameObject.AddComponent(colliderCom) == nil {
+				slog.Error("add collider component failed", slog.String("layerName", layer.Get("name").MustString("Unnamed")))
+				continue
+			}
+			if gameObject.AddComponent(physicsCom) == nil {
+				slog.Error("add physics component failed", slog.String("layerName", layer.Get("name").MustString("Unnamed")))
+				continue
+			}
 		}
 
 		// 获取标签信息，有的话设置
@@ -409,7 +436,10 @@ func (ll *LevelLoader) loadObjectLayer(layer *simplejson.Json, scene IScene) {
 			} else {
 				slog.Warn("game object has no physics component", slog.String("gameObjectName", name))
 				physicsCom := component.NewPhysicsComponent(scene.GetContext().PhysicsEngine, 1.0, gravity.(bool))
-				gameObject.AddComponent(physicsCom)
+				if gameObject.AddComponent(physicsCom) == nil {
+					slog.Error("add physics component failed", slog.String("layerName", layer.Get("name").MustString("Unnamed")))
+					continue
+				}
 			}
 		}
 
@@ -498,7 +528,7 @@ func (ll *LevelLoader) getTileTypeByGId(tileset *simplejson.Json, localId int) p
 	return physics.TileTypeNormal
 }
 
-// 根据json数据中的属性判断是否有碰撞盒
+// 根据json数据中的属性判断是否有碰撞盒，有的话返回碰撞盒的矩形
 func (ll *LevelLoader) getColliderRect(tile *simplejson.Json) *emath.Rect {
 	objectgroup, ok := tile.CheckGet("objectgroup")
 	if !ok {

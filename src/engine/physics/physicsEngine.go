@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"math"
 
+	"sunny_land/src/engine/input"
 	"sunny_land/src/engine/utils/def"
 	emath "sunny_land/src/engine/utils/math"
 
@@ -47,6 +48,8 @@ type IContext interface {
 	GetRenderer() IRenderer
 	// 获取摄像机
 	GetCamera() ICamera
+	// 获取输入管理器
+	GetInputManager() input.InputManager
 }
 
 // 游戏对象抽象
@@ -133,6 +136,24 @@ type IPhysicsComponent interface {
 	GetVelocity() mgl32.Vec2
 	// 设置速度
 	SetVelocity(mgl32.Vec2)
+	// 重置所有碰撞标志位
+	ResetCollisionFlags()
+	// 设置下方碰撞标志位
+	SetCollidedBelow(bool)
+	// 设置上方碰撞标志位
+	SetCollidedAbove(bool)
+	// 设置左侧碰撞标志位
+	SetCollidedLeft(bool)
+	// 设置右侧碰撞标志位
+	SetCollidedRight(bool)
+	// 检查是否与底部碰撞
+	HasCollidedBelow() bool
+	// 检查是否与顶部碰撞
+	HasCollidedAbove() bool
+	// 检查是否与左侧碰撞
+	HasCollidedLeft() bool
+	// 检查是否与右侧碰撞
+	HasCollidedRight() bool
 }
 
 // 瓦片类型
@@ -189,7 +210,7 @@ type PhysicsEngine struct {
 	physicsComponents []IPhysicsComponent
 	// 注册的瓦片图层组件容器
 	tileLayerComponents []ITileLayerComponent
-	// 默认重力值{0.0, 980.0}，单位：像素每二次方秒，现实中是，9.8米/s^2，游戏中是，100像素 * 9.8米/s^2 = 980.0像素/s^2
+	// 默认重力加速度{0.0, 980.0}，单位：像素每二次方秒，现实中是，9.8米/s^2，游戏中是，100像素 * 9.8米/s^2 = 980.0像素/s^2
 	gravity mgl32.Vec2
 	// 最大速度值{-500.0, -500.0}/{500.0, 500.0}，单位：像素/秒
 	maxSpeed float32
@@ -251,6 +272,9 @@ func (pe *PhysicsEngine) Update(deltaTime float64) {
 		if pc == nil || !pc.IsEnabled() {
 			continue
 		}
+
+		// 重置碰撞标志位
+		pc.ResetCollisionFlags()
 
 		// 是否使用重力，如果组件接受重力影响，F = m * a
 		if pc.IsUseGravity() {
@@ -390,6 +414,7 @@ func (pe *PhysicsEngine) resolveTileLayerCollisions(pc IPhysicsComponent, deltaT
 				pc.SetVelocity(mgl32.Vec2{0.0, pc.GetVelocity().Y()})
 				// x方向移动到贴着墙壁的位置
 				newObjPos[0] = float32(rightTopTileX)*tileSize.X() - objSize.X()
+				pc.SetCollidedRight(true)
 			} else {
 				// 没有碰撞，需要检测右下角是否是斜坡瓦片
 				// 计算斜坡碰撞x的偏移量，可以利用相似三角形计算y方向的偏移量
@@ -402,6 +427,7 @@ func (pe *PhysicsEngine) resolveTileLayerCollisions(pc IPhysicsComponent, deltaT
 					if targetY < newObjPos.Y() {
 						// 说明碰撞了
 						newObjPos[1] = targetY
+						pc.SetCollidedBelow(true)
 					}
 				}
 			}
@@ -425,6 +451,7 @@ func (pe *PhysicsEngine) resolveTileLayerCollisions(pc IPhysicsComponent, deltaT
 				pc.SetVelocity(mgl32.Vec2{0.0, pc.GetVelocity().Y()})
 				// x方向移动到贴着墙壁的位置
 				newObjPos[0] = float32(leftTopTileX+1) * tileSize.X()
+				pc.SetCollidedLeft(true)
 			} else {
 				// 没有碰撞，需要检测左下角是否是斜坡瓦片
 				// 计算斜坡碰撞x的偏移量，可以利用相似三角形计算y方向的偏移量
@@ -437,6 +464,7 @@ func (pe *PhysicsEngine) resolveTileLayerCollisions(pc IPhysicsComponent, deltaT
 					if targetY < newObjPos.Y() {
 						// 说明碰撞了
 						newObjPos[1] = targetY
+						pc.SetCollidedBelow(true)
 					}
 				}
 			}
@@ -464,6 +492,7 @@ func (pe *PhysicsEngine) resolveTileLayerCollisions(pc IPhysicsComponent, deltaT
 				pc.SetVelocity(mgl32.Vec2{pc.GetVelocity().X(), 0.0})
 				// y方向移动到贴着墙壁的位置
 				newObjPos[1] = float32(leftBottomTileY)*tileSize.Y() - objSize.Y()
+				pc.SetCollidedBelow(true)
 			} else {
 				// 下方两个斜坡都需要检测
 				widthLeft := newObjPos.X() - float32(leftBottomTileX)*tileSize.X()
@@ -481,6 +510,7 @@ func (pe *PhysicsEngine) resolveTileLayerCollisions(pc IPhysicsComponent, deltaT
 						newObjPos[1] = targetY
 						// 只有向下运动时才需要让y速度归零
 						pc.SetVelocity(mgl32.Vec2{pc.GetVelocity().X(), 0.0})
+						pc.SetCollidedBelow(true)
 					}
 				}
 			}
@@ -504,6 +534,7 @@ func (pe *PhysicsEngine) resolveTileLayerCollisions(pc IPhysicsComponent, deltaT
 				pc.SetVelocity(mgl32.Vec2{pc.GetVelocity().X(), 0.0})
 				// y方向移动到贴着墙壁的位置
 				newObjPos[1] = float32(topTopTileY+1) * tileSize.Y()
+				pc.SetCollidedAbove(true)
 			}
 		}
 
@@ -552,6 +583,7 @@ func (pe *PhysicsEngine) resolveSolidObjectCollisions(moveObj, solidObj IGameObj
 			// 如果速度为正(向右移动)，则速度归0，万一物体在固体物体的左边，速度为负，也归零就会被吸附
 			if movePC.GetVelocity().X() > 0.0 {
 				movePC.SetVelocity(mgl32.Vec2{0.0, movePC.GetVelocity().Y()})
+				movePC.SetCollidedRight(true)
 			}
 		} else {
 			// 移动物体在固体物体的右边，让移动物体体贴着固体物体的左边，y方向正常移动
@@ -559,6 +591,7 @@ func (pe *PhysicsEngine) resolveSolidObjectCollisions(moveObj, solidObj IGameObj
 			// 如果速度为负(向左移动)，则速度归0，万一物体在固体物体的右边，速度为正，也归零就会被吸附
 			if movePC.GetVelocity().X() < 0.0 {
 				movePC.SetVelocity(mgl32.Vec2{0.0, movePC.GetVelocity().Y()})
+				movePC.SetCollidedLeft(true)
 			}
 		}
 	} else {
@@ -569,6 +602,7 @@ func (pe *PhysicsEngine) resolveSolidObjectCollisions(moveObj, solidObj IGameObj
 			// 如果速度为正(向上移动)，则速度归0，万一物体在固体物体的上面，速度为负，也归零就会被吸附
 			if movePC.GetVelocity().Y() > 0.0 {
 				movePC.SetVelocity(mgl32.Vec2{movePC.GetVelocity().X(), 0.0})
+				movePC.SetCollidedBelow(true)
 			}
 		} else {
 			// 移动物体在固体物体的下面，让移动物体体贴着固体物体的上面，x方向正常移动
@@ -576,6 +610,7 @@ func (pe *PhysicsEngine) resolveSolidObjectCollisions(moveObj, solidObj IGameObj
 			// 如果速度为负(向下移动)，则速度归0，万一物体在固体物体的下面，速度为正，也归零就会被吸附
 			if movePC.GetVelocity().Y() < 0.0 {
 				movePC.SetVelocity(mgl32.Vec2{movePC.GetVelocity().X(), 0.0})
+				movePC.SetCollidedAbove(true)
 			}
 		}
 	}
@@ -630,16 +665,19 @@ func (pe *PhysicsEngine) ApplyWorldBounds(pc IPhysicsComponent) {
 	if objPos.X() < pe.worldBounds.Position.X() {
 		pc.SetVelocity(mgl32.Vec2{0.0, pc.GetVelocity().Y()})
 		objPos[0] = pe.worldBounds.Position.X()
+		pc.SetCollidedLeft(true)
 	}
 	// 限制上边界
 	if objPos.Y() < pe.worldBounds.Position.Y() {
 		pc.SetVelocity(mgl32.Vec2{pc.GetVelocity().X(), 0.0})
 		objPos[1] = pe.worldBounds.Position.Y()
+		pc.SetCollidedAbove(true)
 	}
 	// 限制右边界
 	if objPos.X()+objSize.X() > pe.worldBounds.Position.X()+pe.worldBounds.Size.X() {
 		pc.SetVelocity(mgl32.Vec2{0.0, pc.GetVelocity().Y()})
 		objPos[0] = pe.worldBounds.Position.X() + pe.worldBounds.Size.X() - objSize.X()
+		pc.SetCollidedRight(true)
 	}
 	// 更新物体位置，因为物体碰撞盒和实际大小不一定一样，所以采用平移
 	tc.Translate(objPos.Sub(worldAABB.Position))

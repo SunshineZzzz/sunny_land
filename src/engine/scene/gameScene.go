@@ -2,13 +2,14 @@ package scene
 
 import (
 	"log/slog"
+
 	"sunny_land/src/engine/component"
 	econtext "sunny_land/src/engine/context"
 	"sunny_land/src/engine/object"
 	"sunny_land/src/engine/utils/def"
 	emath "sunny_land/src/engine/utils/math"
+	gcomponent "sunny_land/src/game/component"
 
-	"github.com/SunshineZzzz/purego-sdl3/sdl"
 	"github.com/go-gl/mathgl/mgl32"
 )
 
@@ -32,30 +33,46 @@ func NewGameScene(sceneName string, ctx *econtext.Context, sceneManager *SceneMa
 func (gs *GameScene) Init() {
 	gs.scene.Init()
 
-	// 加载关卡
-	NewLevelLoader().LoadLevel("assets/maps/level1.tmj", gs)
-	// 注册场景中的main层到物理引擎，main层会有物理属性
-	mainLayer := gs.FindGameObjectByName("main")
-	if mainLayer != nil {
-		tileLayerComp := mainLayer.GetComponent(def.ComponentTypeTileLayer).(*component.TileLayerComponent)
-		if tileLayerComp != nil {
-			gs.ctx.PhysicsEngine.RegisterTileLayerComponent(tileLayerComp)
-			slog.Info("main layer registered to physics engine")
-		}
-	}
-
-	// 获取玩家对象
-	gs.playerObject = gs.FindGameObjectByName("player")
-	if gs.playerObject == nil {
-		slog.Error("player object not found")
+	// 初始化关卡
+	if !gs.InitLevel() {
+		slog.Error("level init failed")
+		gs.GetContext().InputManager.SetShouldQuit(true)
 		return
 	}
 
-	// 相机目标跟踪玩家
-	transformComp := gs.playerObject.GetComponent(def.ComponentTypeTransform).(*component.TransformComponent)
-	if transformComp != nil {
-		gs.ctx.Camera.SetTargetTC(transformComp)
+	// 初始化玩家
+	if !gs.InitPlayer() {
+		slog.Error("player init failed")
+		gs.GetContext().InputManager.SetShouldQuit(true)
+		return
 	}
+
+	slog.Debug("GameScene initialized", slog.String("sceneName", gs.sceneName))
+}
+
+// 初始化关卡
+func (gs *GameScene) InitLevel() bool {
+	// 加载关卡
+	if !NewLevelLoader().LoadLevel("assets/maps/level1.tmj", gs) {
+		slog.Error("level1.tmj load failed")
+		return false
+	}
+
+	// 注册场景中的main层到物理引擎，main层会有物理属性
+	mainLayer := gs.FindGameObjectByName("main")
+	if mainLayer == nil {
+		slog.Error("main layer not found")
+		return false
+	}
+
+	tileLayerComp := mainLayer.GetComponent(def.ComponentTypeTileLayer).(*component.TileLayerComponent)
+	if tileLayerComp == nil {
+		slog.Error("main layer tile layer component not found")
+		return false
+	}
+
+	gs.ctx.PhysicsEngine.RegisterTileLayerComponent(tileLayerComp)
+	slog.Info("main layer registered to physics engine")
 
 	// 世界大小
 	worldSize := mainLayer.GetComponent(def.ComponentTypeTileLayer).(*component.TileLayerComponent).GetWorldSize()
@@ -64,18 +81,41 @@ func (gs *GameScene) Init() {
 
 	// 设置世界边界
 	gs.ctx.PhysicsEngine.SetWorldBounds(&emath.Rect{Position: mgl32.Vec2{0.0, 0.0}, Size: worldSize})
-	slog.Debug("GameScene initialized", slog.String("sceneName", gs.sceneName))
+
+	slog.Debug("GameScene level initialized", slog.String("sceneName", gs.sceneName))
+	return true
+}
+
+// 初始化玩家
+func (gs *GameScene) InitPlayer() bool {
+	// 获取玩家对象
+	gs.playerObject = gs.FindGameObjectByName("player")
+	if gs.playerObject == nil {
+		slog.Error("player object not found")
+		return false
+	}
+
+	// 添加PlayerComponent到玩家对象
+	playerCom := gcomponent.NewPlayerComponent()
+	if gs.playerObject.AddComponent(playerCom) == nil {
+		slog.Error("player component init failed, playerComponent is nil")
+		return false
+	}
+
+	// 相机目标跟踪玩家
+	transformComp := gs.playerObject.GetComponent(def.ComponentTypeTransform).(*component.TransformComponent)
+	if transformComp == nil {
+		slog.Error("player object transform component not found")
+		return false
+	}
+	gs.ctx.Camera.SetTargetTC(transformComp)
+
+	slog.Debug("player object transform component set to camera target")
+	return true
 }
 
 // 更新
 func (gs *GameScene) Update(dt float64) {
-	// 测试更新摄像机
-	// gs.testCamera()
-	// 测试更新玩家
-	gs.TestPlayer()
-	// 测试碰撞对
-	gs.TestCollisionPairs()
-
 	gs.scene.Update(dt)
 }
 
@@ -92,60 +132,4 @@ func (gs *GameScene) HandleInput() {
 // 清理
 func (gs *GameScene) Clean() {
 	gs.scene.Clean()
-}
-
-// 测试摄像机
-func (gs *GameScene) testCamera() {
-	key_state := sdl.GetKeyboardState()
-	if key_state[sdl.ScancodeW] {
-		// 摄像机向上运动
-		gs.ctx.Camera.Move(mgl32.Vec2{0, -1})
-	}
-	if key_state[sdl.ScancodeS] {
-		// 摄像机向下运动
-		gs.ctx.Camera.Move(mgl32.Vec2{0, 1})
-	}
-	if key_state[sdl.ScancodeA] {
-		// 摄像机向左运动
-		gs.ctx.Camera.Move(mgl32.Vec2{-1, 0})
-	}
-	if key_state[sdl.ScancodeD] {
-		// 摄像机向右运动
-		gs.ctx.Camera.Move(mgl32.Vec2{1, 0})
-	}
-}
-
-// 测试游戏对象
-func (gs *GameScene) TestPlayer() {
-	if gs.playerObject == nil {
-		return
-	}
-	inputManager := gs.ctx.InputManager
-	physicsComp := gs.playerObject.GetComponent(def.ComponentTypePhysics).(*component.PhysicsComponent)
-	if physicsComp == nil {
-		return
-	}
-	if inputManager.IsActionDown("move_left") {
-		physicsComp.Velocity[0] = -100.0
-	} else {
-		physicsComp.Velocity[0] *= 0.9
-	}
-
-	if inputManager.IsActionDown("move_right") {
-		physicsComp.Velocity[0] = 100.0
-	} else {
-		physicsComp.Velocity[0] *= 0.9
-	}
-
-	if inputManager.IsActionPressed("jump") {
-		physicsComp.Velocity[1] = -400.0
-	}
-}
-
-// 测试碰撞组件对
-func (gs *GameScene) TestCollisionPairs() {
-	collision_pairs := gs.ctx.PhysicsEngine.GetCollisionPairs()
-	for _, pair := range collision_pairs {
-		slog.Info("碰撞对", slog.String("a", pair.A.(*object.GameObject).GetName()), slog.String("b", pair.B.(*object.GameObject).GetName()))
-	}
 }

@@ -40,7 +40,7 @@ func NewTileLayerComponent(tileSize mgl32.Vec2, mapSize mgl32.Vec2, tiles []*phy
 	slog.Debug("create tile layer component", slog.Any("tileSize", tileSize), slog.Any("mapSize", mapSize), slog.Int("tileCount", len(tiles)))
 	return &TileLayerComponent{
 		Component: Component{
-			componentType: def.ComponentTypeTileLayer,
+			ComponentType: def.ComponentTypeTileLayer,
 		},
 		tileSize: tileSize,
 		mapSize:  mapSize,
@@ -52,7 +52,7 @@ func NewTileLayerComponent(tileSize mgl32.Vec2, mapSize mgl32.Vec2, tiles []*phy
 
 // 初始化
 func (tlc *TileLayerComponent) Init() {
-	if tlc.owner == nil {
+	if tlc.Owner == nil {
 		slog.Error("owner is nil")
 		return
 	}

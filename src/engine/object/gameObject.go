@@ -64,17 +64,18 @@ func (gt *GameObject) Clean() {
 }
 
 // 添加组件
-func (gt *GameObject) AddComponent(component physics.IComponent) {
+func (gt *GameObject) AddComponent(component physics.IComponent) physics.IComponent {
 	if _, exists := gt.components[component.GetType()]; exists {
 		slog.Error("component already exists in game object", slog.String("gameObject.Name", gt.name), slog.String("gameObject.Tag", gt.tag),
 			slog.Any("componentType", component.GetType()))
-		return
+		return nil
 	}
 	gt.components[component.GetType()] = component
 	component.SetOwner(gt)
 	component.Init()
 	slog.Debug("add component to game object", slog.String("gameObject.Name", gt.name), slog.String("gameObject.Tag", gt.tag),
 		slog.Any("componentType", component.GetType()))
+	return component
 }
 
 // 获取组件

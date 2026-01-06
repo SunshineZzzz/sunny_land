@@ -5,7 +5,6 @@ import (
 
 	econtext "sunny_land/src/engine/context"
 	"sunny_land/src/engine/input"
-	"sunny_land/src/engine/object"
 	"sunny_land/src/engine/physics"
 	"sunny_land/src/engine/render"
 	"sunny_land/src/engine/resource"
@@ -13,12 +12,6 @@ import (
 
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
 	"github.com/go-gl/mathgl/mgl32"
-)
-
-var (
-	// 暂时测试
-	testRotation float64 = 0.0
-	gameObject           = object.NewGameObject("test", "test")
 )
 
 // 主游戏应用，初始化SDL，管理游戏循环
@@ -225,11 +218,6 @@ func (g *GameApp) Run() {
 		return
 	}
 
-	// 测试资源管理器
-	// g.testResourceManager()
-	// 测试游戏对象
-	// g.testGameObject()
-
 	for g.isRunning {
 		g.fpsManager.Update()
 		deltaTime := g.fpsManager.GetDeltaTime()
@@ -251,8 +239,6 @@ func (g *GameApp) HandleEvents() {
 		g.isRunning = false
 	}
 
-	// 测试输入管理器
-	// g.testInputManager()
 	// 处理场景事件
 	g.sceneManager.HandleInput()
 }
@@ -269,78 +255,9 @@ func (g *GameApp) render() {
 	g.renderer.ClearScreen()
 
 	// 渲染代码
-	// 测试代码
-	// g.testRenderer()
-	// gameObject.Render(g.context)
 	// 渲染场景
 	g.sceneManager.Render()
 
 	// 显示渲染结果
 	g.renderer.Present()
 }
-
-// 测试资源管理器
-// func (g *GameApp) testResourceManager() {
-// 	g.resourceManager.GetTexture("assets/textures/Actors/eagle-attack.png")
-// 	g.resourceManager.GetFont("assets/fonts/VonwaonBitmap-16px.ttf", 16)
-// 	g.resourceManager.GetSound("assets/audio/button_click.wav")
-
-// 	g.resourceManager.UnloadTexture("assets/textures/Actors/eagle-attack.png")
-// 	g.resourceManager.UnloadFont("assets/fonts/VonwaonBitmap-16px.ttf", 16)
-// 	g.resourceManager.UnloadSound("assets/audio/button_click.wav")
-// }
-
-// 测试渲染器
-// func (g *GameApp) testRenderer() {
-// 	spriteWorld := render.NewSprite("assets/textures/Actors/frog.png", nil, false)
-// 	spriteUI := render.NewSprite("assets/textures/UI/buttons/Start1.png", nil, false)
-// 	spriteParallax := render.NewSprite("assets/textures/Layers/back.png", nil, false)
-
-// 	testRotation += 0.1
-
-// 	// 注意渲染顺序
-// 	g.renderer.DrawSpriteWithParallax(g.camera, spriteParallax, mgl32.Vec2{100, 100}, mgl32.Vec2{0.5, 0.5}, mgl32.Vec2{1.0, 1.0}, math.Vec2B{true, false})
-// 	g.renderer.DrawSprite(g.camera, spriteWorld, mgl32.Vec2{200, 200}, mgl32.Vec2{1.0, 1.0}, testRotation)
-// 	g.renderer.DrawUISprite(spriteUI, mgl32.Vec2{100, 100}, nil)
-// }
-
-// 测试输入管理器
-// func (g *GameApp) testInputManager() {
-// 	actions := []string{
-// 		"move_up",
-// 		"move_down",
-// 		"move_left",
-// 		"move_right",
-// 		"jump",
-// 		"attack",
-// 		"pause",
-// 		"MouseLeftClick",
-// 		"MouseRightClick",
-// 	}
-
-// 	for _, action := range actions {
-// 		if g.inputManager.IsActionPressed(action) {
-// 			slog.Info("按下 ", slog.String("action", action))
-// 		}
-// 		if g.inputManager.IsActionReleased(action) {
-// 			slog.Info("抬起 ", slog.String("action", action))
-// 		}
-// 		if g.inputManager.IsActionDown(action) {
-// 			slog.Info("按下中 ", slog.String("action", action))
-// 		}
-// 	}
-// }
-
-// func (g *GameApp) testGameObject() {
-// 	transformComp := component.NewTransformComponent(mgl32.Vec2{100.0, 100.0}, mgl32.Vec2{1.0, 1.0}, 0.0)
-// 	spriteComp := component.NewSpriteComponent("assets/textures/Props/big-crate.png", g.resourceManager, utils.AlignCenter, nil, false)
-// 	gameObject.AddComponent(transformComp)
-// 	gameObject.AddComponent(spriteComp)
-
-// 	transformComp2 := gameObject.GetComponent(&component.TransformComponent{}).(*component.TransformComponent)
-// 	if transformComp2 != transformComp {
-// 		slog.Error("testGameObject: transform component mismatch")
-// 	}
-// 	transformComp2.SetScale(mgl32.Vec2{2.0, 2.0})
-// 	transformComp2.SetRotation(30.0)
-// }
