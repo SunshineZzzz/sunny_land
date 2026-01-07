@@ -42,6 +42,14 @@ type PlayerComponent struct {
 	// 属性相关参数
 	// 玩家被击中后的硬直时间(单位：秒)
 	stunnedDuration float64
+	// 土狼时间(Coyote Time): 允许玩家在离地后短暂时间内仍然可以跳跃，单位：秒
+	coyoteTime float64
+	// 土狼计时器
+	coyoteTimeTimer float64
+	// 无敌闪烁间隔时间，单位：秒
+	flashInterval float64
+	// 无敌闪烁计时器
+	flashTimer float64
 }
 
 // 确保玩家组件实现了IPlayerComponent接口
@@ -62,6 +70,8 @@ func NewPlayerComponent() *PlayerComponent {
 		jumpSpeed:       350.0,
 		climbSpeed:      100.0,
 		stunnedDuration: 0.4,
+		coyoteTime:      0.1,
+		flashInterval:   0.1,
 	}
 }
 
@@ -148,6 +158,38 @@ func (p *PlayerComponent) Update(dt float64, ctx physics.IContext) {
 	if p.currentState == nil {
 		return
 	}
+
+	// 一旦离地，开始计时 Coyote Timer
+	if !p.physicsCom.HasCollidedBelow() {
+		p.coyoteTimeTimer += dt
+	} else {
+		// 如果碰撞到地面，重置 Coyote Timer
+		p.coyoteTimeTimer = 0.0
+	}
+
+	// 如果处于无敌状态，则进行闪烁
+	if p.healthCom.IsInvincible() {
+		// 累加帧时间
+		p.flashTimer += dt
+
+		// 手动实现类似%取余的循环逻辑，保证计时器永远在 [0, 0.2] 之间波动
+		if p.flashTimer >= 2.0*p.flashInterval {
+			p.flashTimer -= 2.0 * p.flashInterval
+		}
+
+		// 一半时间可见，一半时间不可见
+		if p.flashTimer < p.flashInterval {
+			// 前0.1秒内不可见
+			p.spriteCom.SetHidden(true)
+		} else {
+			// 后0.1秒内可见
+			p.spriteCom.SetHidden(false)
+		}
+	} else {
+		// 不是无敌状态，确保精灵图可见
+		p.spriteCom.SetHidden(false)
+	}
+
 	nextState := p.currentState.Update(dt, ctx)
 	if nextState != nil {
 		p.SetState(nextState)
@@ -247,4 +289,9 @@ func (p *PlayerComponent) GetStunnedDuration() float64 {
 // 设置玩家被击中后的硬直时间
 func (p *PlayerComponent) SetStunnedDuration(stunnedDuration float64) {
 	p.stunnedDuration = stunnedDuration
+}
+
+// 检查玩家是否在地面上，考虑土狼时间
+func (p *PlayerComponent) IsOnGround() bool {
+	return p.coyoteTimeTimer <= p.coyoteTime || p.physicsCom.HasCollidedBelow()
 }

@@ -78,7 +78,7 @@ func (ws *WalkState) Update(deltaTime float64, ctx physics.IContext) IPlayerStat
 	physicsCom.Velocity[0] = mgl32.Clamp(physicsCom.Velocity.X(), -ws.playerCom.GetMaxSpeed(), ws.playerCom.GetMaxSpeed())
 
 	// 如果下方没有碰撞，切换到下落状态
-	if !physicsCom.HasCollidedBelow() {
+	if !ws.playerCom.IsOnGround() {
 		return NewFallState(ws.playerCom)
 	}
 	return nil

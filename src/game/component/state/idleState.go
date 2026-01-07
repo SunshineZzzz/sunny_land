@@ -38,8 +38,8 @@ func (is *IdleState) Update(dt float64, ctx physics.IContext) IPlayerState {
 	frictionFactor := is.playerCom.GetFrictionFactor()
 	physicsCom.Velocity[0] *= frictionFactor
 
-	// 如果下方没有碰撞，则切换到下落状态
-	if !physicsCom.HasCollidedBelow() {
+	// 如果离地，则切换到下落状态
+	if !is.playerCom.IsOnGround() {
 		return NewFallState(is.playerCom)
 	}
 

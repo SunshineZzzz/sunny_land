@@ -195,3 +195,8 @@ func (sc *SpriteComponent) SetIsFliped(isFlipped bool) {
 func (sc *SpriteComponent) GetIsFliped() bool {
 	return sc.sprite.GetIsFlipped()
 }
+
+// 设置是否可见
+func (sc *SpriteComponent) SetHidden(isHidden bool) {
+	sc.isHidden = isHidden
+}

@@ -603,6 +603,10 @@ func (pe *PhysicsEngine) resolveTileLayerCollisions(pc IPhysicsComponent, deltaT
 					// 左下瓦片下标*瓦片高度-物体高度-斜坡高度=物体在斜坡上的y坐标
 					// 假设没有斜坡，物体应该在的y坐标，再减去height，就是物体在斜坡上的y坐标
 					targetY := float32(leftBottomTileY+1)*tileSize.Y() - objSize.Y() - height
+					// 比如从左向右走的时候，左下方确实存在斜坡，当前帧期望的Y坐标高于碰撞体，这个时候就没有碰撞，处于下落转换，
+					// walkState -> fallState 发生碰撞 -> walkState，慢速走在斜坡上的时候，明显动画反复切换
+					// 而且这里还有一个问题，fallState时候，没法跳跃
+					// 会用土狼时间来解决这个问题
 					if targetY < newObjPos.Y() {
 						// 说明碰撞了
 						newObjPos[1] = targetY
