@@ -2,6 +2,7 @@ package render
 
 import (
 	"log/slog"
+
 	"sunny_land/src/engine/physics"
 
 	"github.com/SunshineZzzz/purego-sdl3/sdl"

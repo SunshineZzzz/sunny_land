@@ -210,6 +210,8 @@ const (
 	TileTypeSlope_1_2
 	// 斜坡瓦片，高度:左1/2 右0
 	TileTypeSlope_2_0
+	// 危险瓦片，例如火焰、尖刺等
+	TileTypeHazard
 )
 
 // 单个瓦片信息
@@ -234,6 +236,14 @@ type CollisionPair struct {
 	B IGameObject
 }
 
+// 瓦片触发事件对
+type TileTriggerEventPair struct {
+	// 触发事件的游戏对象
+	GameObject IGameObject
+	// 触发的瓦片类型
+	TileType TileType
+}
+
 // 物理引擎，负责管理和模拟物理行为，碰撞检测
 type PhysicsEngine struct {
 	// 注册的物理组件容器
@@ -246,6 +256,8 @@ type PhysicsEngine struct {
 	maxSpeed float32
 	// 存储本帧发生的碰撞组件对
 	collisionPairs []CollisionPair
+	// 存储本帧发生的瓦片触发事件
+	tileTriggerEvents []TileTriggerEventPair
 	// 世界边界，限制物体移动
 	worldBounds *emath.Rect
 }
@@ -258,6 +270,7 @@ func NewPhysicsEngine() *PhysicsEngine {
 		gravity:           mgl32.Vec2{0.0, 980.0},
 		maxSpeed:          500.0,
 		collisionPairs:    make([]CollisionPair, 0),
+		tileTriggerEvents: make([]TileTriggerEventPair, 0),
 	}
 }
 
@@ -297,6 +310,10 @@ func (pe *PhysicsEngine) UnregisterTileLayerComponent(component ITileLayerCompon
 
 // 更新
 func (pe *PhysicsEngine) Update(deltaTime float64) {
+	// 每帧开始时先清空碰撞对列表和瓦片触发事件列表
+	pe.collisionPairs = pe.collisionPairs[:0]
+	pe.tileTriggerEvents = pe.tileTriggerEvents[:0]
+
 	// 遍历所有注册的物理组件，更新他们的物理状态
 	for _, pc := range pe.physicsComponents {
 		if pc == nil || !pc.IsEnabled() {
@@ -328,10 +345,10 @@ func (pe *PhysicsEngine) Update(deltaTime float64) {
 		pe.ApplyWorldBounds(pc)
 	}
 
-	// 每帧开始前先清空碰撞对切片
-	pe.collisionPairs = pe.collisionPairs[:0]
 	// 处理对象间的碰撞
 	pe.checkObjectCollisions()
+	// 检测瓦片触发事件，检测前已经处理完位移
+	pe.checkTileTriggers()
 }
 
 // 检查对象间的碰撞
@@ -377,9 +394,14 @@ func (pe *PhysicsEngine) checkObjectCollisions() {
 	}
 }
 
-// 获取碰撞组件对切片
+// 获取本帧检测到的所有碰撞对，此列表在每次update开始时清空
 func (pe *PhysicsEngine) GetCollisionPairs() []CollisionPair {
 	return pe.collisionPairs
+}
+
+// 获取本帧检测到的所有瓦片触发事件，此列表在每次update开始时清空
+func (pe *PhysicsEngine) GetTileTriggerEvents() []TileTriggerEventPair {
+	return pe.tileTriggerEvents
 }
 
 // 处理瓦片层(图块层)碰撞
@@ -724,4 +746,58 @@ func (pe *PhysicsEngine) ApplyWorldBounds(pc IPhysicsComponent) {
 	}
 	// 更新物体位置，因为物体碰撞盒和实际大小不一定一样，所以采用平移
 	tc.Translate(objPos.Sub(worldAABB.Position))
+}
+
+// 检测所有游戏对象与瓦片层的触发器类型瓦片碰撞，并记录触发事件。位移处理完毕后再调用
+func (pe *PhysicsEngine) checkTileTriggers() {
+	for _, pc := range pe.physicsComponents {
+		if pc == nil || !pc.IsEnabled() {
+			continue
+		}
+		obj := pc.GetOwner()
+		if obj == nil {
+			continue
+		}
+		cc := obj.GetComponent(def.ComponentTypeCollider).(IColliderComponent)
+		// 如果游戏对象本就是触发器，则不需要检查瓦片触发事件
+		if cc == nil || !cc.IsActive() || cc.IsTrigger() {
+			continue
+		}
+
+		// 获取游戏对象的世界AABB
+		worldAABB := cc.GetWorldAABB()
+		// 使用set来跟踪循环遍历中已经触发过的瓦片类型，防止重复添加，例如，玩家同时踩到两个尖刺，只需要受到一次伤害
+		triggeredTypes := make(map[TileType]bool)
+
+		// 遍历所有注册的碰撞瓦片层分别进行检测
+		for _, tileLayerComp := range pe.tileLayerComponents {
+			if tileLayerComp == nil {
+				continue
+			}
+
+			tileSize := tileLayerComp.GetTileSize()
+			// 检查右边缘和下边缘时，需要减1像素，否则会检查到下一行/列的瓦片
+			tolernance := float32(1.0)
+			// 获取瓦片坐标范围
+			startX := int(math.Floor(float64(worldAABB.Position.X() / tileSize.X())))
+			endX := int(math.Ceil(float64((worldAABB.Position.X() + worldAABB.Size.X() - tolernance) / tileSize.X())))
+			startY := int(math.Floor(float64(worldAABB.Position.Y() / tileSize.Y())))
+			endY := int(math.Ceil(float64((worldAABB.Position.Y() + worldAABB.Size.Y() - tolernance) / tileSize.Y())))
+
+			// 遍历瓦片坐标范围，检查是否有触发器类型的瓦片
+			for x := startX; x < endX; x++ {
+				for y := startY; y < endY; y++ {
+					tileType := tileLayerComp.GetTileTypeAt(x, y)
+					// 未来可以添加更多触发器类型的瓦片，目前只有HAZARD类型
+					if tileType == TileTypeHazard && !triggeredTypes[tileType] {
+						triggeredTypes[tileType] = true
+					}
+				}
+			}
+			// 遍历触发事件集合，添加到tileTriggerEvents中
+			for tileType := range triggeredTypes {
+				pe.tileTriggerEvents = append(pe.tileTriggerEvents, TileTriggerEventPair{GameObject: obj, TileType: tileType})
+			}
+		}
+	}
 }

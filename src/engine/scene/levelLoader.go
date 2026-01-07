@@ -426,6 +426,9 @@ func (ll *LevelLoader) loadObjectLayer(layer *simplejson.Json, scene IScene) {
 		tag := ll.getTileProperty(tileJson, "tag")
 		if tag != nil {
 			gameObject.SetTag(tag.(string))
+		} else if tileInfo.Type == physics.TileTypeHazard {
+			// 如果是危险瓦片，且没有手动设置标签，则自动设置标签为 "hazard"
+			gameObject.SetTag("hazard")
 		}
 
 		// 获取重力信息并设置
@@ -575,6 +578,12 @@ func (ll *LevelLoader) getTileTypeByJson(tile *simplejson.Json) physics.TileType
 			isUniSolid := prop.Get("value").MustBool(false)
 			if isUniSolid {
 				return physics.TileTypeUniSolid
+			}
+			return physics.TileTypeNormal
+		} else if prop.Get("name").MustString("") == "hazard" {
+			isHazard := prop.Get("value").MustBool(false)
+			if isHazard {
+				return physics.TileTypeHazard
 			}
 			return physics.TileTypeNormal
 		} else if prop.Get("name").MustString("") == "slope" {
