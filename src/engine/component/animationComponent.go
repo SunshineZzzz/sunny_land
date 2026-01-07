@@ -120,6 +120,11 @@ func (a *AnimationComponent) StopAnimation() {
 	a.isPlaying = false
 }
 
+// 恢复播放当前动画
+func (a *AnimationComponent) ResumeAnimation() {
+	a.isPlaying = true
+}
+
 // 获取当前正在播放的动画名称
 func (a *AnimationComponent) GetCurrentAnimationName() string {
 	if a.currentAnimation == nil {

@@ -586,6 +586,12 @@ func (ll *LevelLoader) getTileTypeByJson(tile *simplejson.Json) physics.TileType
 				return physics.TileTypeHazard
 			}
 			return physics.TileTypeNormal
+		} else if prop.Get("name").MustString("") == "ladder" {
+			isLadder := prop.Get("value").MustBool(false)
+			if isLadder {
+				return physics.TileTypeLadder
+			}
+			return physics.TileTypeNormal
 		} else if prop.Get("name").MustString("") == "slope" {
 			isSlope := prop.Get("value").MustString("")
 			switch isSlope {

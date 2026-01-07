@@ -52,6 +52,12 @@ func (js *JumpState) HandleInput(ctx physics.IContext) IPlayerState {
 	physicsCom := js.playerCom.GetPhysicsComponent()
 	spriteCom := js.playerCom.GetSpriteComponent()
 
+	// 如果按下上下键，且与梯子重合，则切换到ClimbState
+	if physicsCom.HasCollidedLadder() &&
+		(inputManager.IsActionDown("move_up") || inputManager.IsActionDown("move_down")) {
+		return NewClimbState(js.playerCom)
+	}
+
 	// 跳跃状态下可以左右移动
 	if inputManager.IsActionDown("move_left") {
 		// 如果当前是向右移动，速度清空

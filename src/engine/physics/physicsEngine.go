@@ -170,6 +170,8 @@ type IPhysicsComponent interface {
 	SetCollidedLeft(bool)
 	// 设置右侧碰撞标志位
 	SetCollidedRight(bool)
+	// 设置梯子碰撞标志位
+	SetCollidedLadder(bool)
 	// 检查是否与底部碰撞
 	HasCollidedBelow() bool
 	// 检查是否与顶部碰撞
@@ -178,6 +180,8 @@ type IPhysicsComponent interface {
 	HasCollidedLeft() bool
 	// 检查是否与右侧碰撞
 	HasCollidedRight() bool
+	// 检查是否与梯子碰撞
+	HasCollidedLadder() bool
 }
 
 // 健康组件抽象
@@ -212,6 +216,8 @@ const (
 	TileTypeSlope_2_0
 	// 危险瓦片，例如火焰、尖刺等
 	TileTypeHazard
+	// 梯子瓦片
+	TileTypeLadder
 )
 
 // 单个瓦片信息
@@ -791,6 +797,9 @@ func (pe *PhysicsEngine) checkTileTriggers() {
 					// 未来可以添加更多触发器类型的瓦片，目前只有HAZARD类型
 					if tileType == TileTypeHazard && !triggeredTypes[tileType] {
 						triggeredTypes[tileType] = true
+					} else if tileType == TileTypeLadder && !triggeredTypes[tileType] {
+						// 梯子类型不必记录到事件容器，物理引擎自己处理
+						pc.SetCollidedLadder(true)
 					}
 				}
 			}

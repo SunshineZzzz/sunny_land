@@ -18,6 +18,10 @@ type IPlayerComponent interface {
 	GetSpriteComponent() *eComponent.SpriteComponent
 	// 获取物理组件
 	GetPhysicsComponent() *eComponent.PhysicsComponent
+	// 获取动画组件
+	GetAnimationComponent() *eComponent.AnimationComponent
+	// 获取生命值组件
+	GetHealthComponent() *eComponent.HealthComponent
 	// 获取摩擦系数
 	GetFrictionFactor() float32
 	// 获取移动力
@@ -26,6 +30,8 @@ type IPlayerComponent interface {
 	GetJumpSpeed() float32
 	// 获取最大水平速度
 	GetMaxSpeed() float32
+	// 获取攀爬速度
+	GetClimbSpeed() float32
 	// 获取硬直时间
 	GetStunnedDuration() float64
 }

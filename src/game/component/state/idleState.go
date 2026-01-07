@@ -47,6 +47,13 @@ func (is *IdleState) Update(dt float64, ctx physics.IContext) IPlayerState {
 // 输入
 func (is *IdleState) HandleInput(ctx physics.IContext) IPlayerState {
 	inputManager := ctx.GetInputManager()
+	physicsCom := is.playerCom.GetPhysicsComponent()
+
+	// 如果按"move_up"键，且与梯子重合，则切换到ClimbState
+	if physicsCom.HasCollidedLadder() && inputManager.IsActionDown("move_up") {
+		return NewClimbState(is.playerCom)
+	}
+
 	// 如果按下了左右移动键，则切换到移动状态
 	if inputManager.IsActionDown("move_left") || inputManager.IsActionDown("move_right") {
 		// 切换到移动状态

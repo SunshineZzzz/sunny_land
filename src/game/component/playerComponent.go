@@ -37,6 +37,8 @@ type PlayerComponent struct {
 	frictionFactor float32
 	// 跳跃速度(像素每秒)
 	jumpSpeed float32
+	// 攀爬速度(像素每秒)
+	climbSpeed float32
 	// 属性相关参数
 	// 玩家被击中后的硬直时间(单位：秒)
 	stunnedDuration float64
@@ -58,6 +60,7 @@ func NewPlayerComponent() *PlayerComponent {
 		maxSpeed:        120.0,
 		frictionFactor:  0.85,
 		jumpSpeed:       350.0,
+		climbSpeed:      100.0,
 		stunnedDuration: 0.4,
 	}
 }
@@ -224,6 +227,16 @@ func (p *PlayerComponent) SetJumpSpeed(jumpSpeed float32) {
 // 获取跳跃速度
 func (p *PlayerComponent) GetJumpSpeed() float32 {
 	return p.jumpSpeed
+}
+
+// 获取攀爬速度
+func (p *PlayerComponent) GetClimbSpeed() float32 {
+	return p.climbSpeed
+}
+
+// 设置攀爬速度
+func (p *PlayerComponent) SetClimbSpeed(climbSpeed float32) {
+	p.climbSpeed = climbSpeed
 }
 
 // 获取玩家被击中后的硬直时间
