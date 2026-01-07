@@ -37,6 +37,8 @@ type PhysicsComponent struct {
 	collidedRight bool
 	// 是否与梯子碰撞
 	collidedLadder bool
+	// 是否在梯子顶层
+	collidedLadderTop bool
 }
 
 // 确保SpriteComponent实现了IComponent接口
@@ -145,6 +147,7 @@ func (pc *PhysicsComponent) ResetCollisionFlags() {
 	pc.collidedLeft = false
 	pc.collidedRight = false
 	pc.collidedLadder = false
+	pc.collidedLadderTop = false
 }
 
 // 设置下方碰撞标志位
@@ -172,6 +175,11 @@ func (pc *PhysicsComponent) SetCollidedLadder(collided bool) {
 	pc.collidedLadder = collided
 }
 
+// 设置梯子顶层碰撞标志位
+func (pc *PhysicsComponent) SetCollidedLadderTop(collided bool) {
+	pc.collidedLadderTop = collided
+}
+
 // 检查是否与底部碰撞
 func (pc *PhysicsComponent) HasCollidedBelow() bool {
 	return pc.collidedBelow
@@ -195,4 +203,9 @@ func (pc *PhysicsComponent) HasCollidedRight() bool {
 // 检查是否与梯子碰撞
 func (pc *PhysicsComponent) HasCollidedLadder() bool {
 	return pc.collidedLadder
+}
+
+// 检查是否与梯子顶层碰撞
+func (pc *PhysicsComponent) HasCollidedLadderTop() bool {
+	return pc.collidedLadderTop
 }

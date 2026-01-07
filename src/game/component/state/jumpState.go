@@ -40,7 +40,7 @@ func (js *JumpState) Update(deltaTime float64, ctx physics.IContext) IPlayerStat
 	physicsCom.Velocity[0] = mgl32.Clamp(physicsCom.Velocity.X(), -js.playerCom.GetMaxSpeed(), js.playerCom.GetMaxSpeed())
 
 	// 如果向下移动，切换到下落状态
-	if physicsCom.Velocity.Y() > 0.0 {
+	if physicsCom.Velocity.Y() >= 0.0 {
 		return NewFallState(js.playerCom)
 	}
 	return nil

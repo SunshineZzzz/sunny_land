@@ -168,6 +168,8 @@ type IPhysicsComponent interface {
 	SetCollidedAbove(bool)
 	// 设置左侧碰撞标志位
 	SetCollidedLeft(bool)
+	// 设置梯子顶层碰撞标志位
+	SetCollidedLadderTop(bool)
 	// 设置右侧碰撞标志位
 	SetCollidedRight(bool)
 	// 设置梯子碰撞标志位
@@ -182,6 +184,8 @@ type IPhysicsComponent interface {
 	HasCollidedRight() bool
 	// 检查是否与梯子碰撞
 	HasCollidedLadder() bool
+	// 检查是否与梯子顶层碰撞
+	HasCollidedLadderTop() bool
 }
 
 // 健康组件抽象
@@ -564,6 +568,29 @@ func (pe *PhysicsEngine) resolveTileLayerCollisions(pc IPhysicsComponent, deltaT
 				// y方向移动到贴着墙壁的位置
 				newObjPos[1] = float32(leftBottomTileY)*tileSize.Y() - objSize.Y()
 				pc.SetCollidedBelow(true)
+			} else if leftBottomTileType == TileTypeLadder && rightBottomTileType == TileTypeLadder {
+				// 如果两个角点都位于梯子上，则判断是不是处在梯子顶层
+				// 左角点上方瓦片类型
+				leftBottomTileTypeUp := tl.GetTileTypeAt(leftBottomTileX, leftBottomTileY-1)
+				// 右角点上方瓦片类型
+				rightBottomTileTypeUp := tl.GetTileTypeAt(rightBottomTileX, leftBottomTileY-1)
+				// 如果上方不是梯子，证明处在梯子顶层
+				if leftBottomTileTypeUp != TileTypeLadder && rightBottomTileTypeUp != TileTypeLadder {
+					// 通过是否使用重力来区分是否处于攀爬状态
+					if pc.IsUseGravity() {
+						// 非攀爬状态，证明处在梯子顶层
+						pc.SetCollidedLadderTop(true)
+						// 重置梯子顶层碰撞标志位
+						pc.SetCollidedBelow(true)
+						// 让物体贴着梯子顶层位置(与SOLID情况相同)
+						// 撞墙了，速度归0
+						pc.SetVelocity(mgl32.Vec2{pc.GetVelocity().X(), 0.0})
+						// y方向移动到贴着墙壁的位置
+						newObjPos[1] = float32(leftBottomTileY)*tileSize.Y() - objSize.Y()
+					} else {
+						// 攀爬状态，不做任何处理
+					}
+				}
 			} else {
 				// 下方两个斜坡都需要检测
 				widthLeft := newObjPos.X() - float32(leftBottomTileX)*tileSize.X()

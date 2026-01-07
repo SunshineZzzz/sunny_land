@@ -2,6 +2,8 @@ package state
 
 import (
 	"sunny_land/src/engine/physics"
+
+	"github.com/go-gl/mathgl/mgl32"
 )
 
 // 空闲状态
@@ -51,6 +53,13 @@ func (is *IdleState) HandleInput(ctx physics.IContext) IPlayerState {
 
 	// 如果按"move_up"键，且与梯子重合，则切换到ClimbState
 	if physicsCom.HasCollidedLadder() && inputManager.IsActionDown("move_up") {
+		return NewClimbState(is.playerCom)
+	}
+
+	// 如果按下"move_down"且在梯子顶层，则切换到ClimbState
+	if physicsCom.HasCollidedLadderTop() && inputManager.IsActionDown("move_down") {
+		// 需要向下移动一点，确保下一帧能与梯子碰撞，否则会切换回FallState
+		is.playerCom.GetTransformComponent().Translate(mgl32.Vec2{0, 2.0})
 		return NewClimbState(is.playerCom)
 	}
 
