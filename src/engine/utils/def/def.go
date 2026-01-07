@@ -21,6 +21,8 @@ const (
 	ComponentTypeAnimation
 	// 健康组件
 	ComponentTypeHealth
+	// AI组件
+	ComponentTypeAI
 
 	// 玩家组件
 	ComponentTypePlayer

@@ -9,6 +9,7 @@ import (
 	"sunny_land/src/engine/render"
 	"sunny_land/src/engine/resource"
 	"sunny_land/src/engine/scene"
+	escene "sunny_land/src/game/scene"
 
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
 	"github.com/go-gl/mathgl/mgl32"
@@ -89,7 +90,7 @@ func (g *GameApp) init() bool {
 	}
 
 	// 创建第一个场景
-	scene := scene.NewGameScene("GameScene", g.context, g.sceneManager)
+	scene := escene.NewGameScene("GameScene", g.context, g.sceneManager)
 	// 添加场景到场景管理器
 	g.sceneManager.RequestPushScene(scene)
 

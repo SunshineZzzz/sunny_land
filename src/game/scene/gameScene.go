@@ -8,10 +8,12 @@ import (
 	"sunny_land/src/engine/object"
 	"sunny_land/src/engine/physics"
 	"sunny_land/src/engine/render"
+	escene "sunny_land/src/engine/scene"
 	"sunny_land/src/engine/utils"
 	"sunny_land/src/engine/utils/def"
 	emath "sunny_land/src/engine/utils/math"
 	gcomponent "sunny_land/src/game/component"
+	"sunny_land/src/game/component/ai"
 
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
 	"github.com/go-gl/mathgl/mgl32"
@@ -20,22 +22,22 @@ import (
 // 游戏场景，主要的游戏场景，包含玩家、敌人、关卡元素等。
 type GameScene struct {
 	// 继承基础场景
-	scene
+	escene.Scene
 	// 保存玩家对象指针，方便访问
 	playerObject *object.GameObject
 }
 
 // 创建游戏场景
-func NewGameScene(sceneName string, ctx *econtext.Context, sceneManager *SceneManager) *GameScene {
+func NewGameScene(sceneName string, ctx *econtext.Context, sceneManager *escene.SceneManager) *GameScene {
 	gs := &GameScene{}
-	buildScene(&gs.scene, sceneName, ctx, sceneManager)
+	escene.BuildScene(&gs.Scene, sceneName, ctx, sceneManager)
 	slog.Debug("GameScene created", slog.String("sceneName", sceneName))
 	return gs
 }
 
 // 初始化游戏场景
 func (gs *GameScene) Init() {
-	gs.scene.Init()
+	gs.Scene.Init()
 
 	// 初始化关卡
 	if !gs.InitLevel() {
@@ -58,13 +60,13 @@ func (gs *GameScene) Init() {
 		return
 	}
 
-	slog.Debug("GameScene initialized", slog.String("sceneName", gs.sceneName))
+	slog.Debug("GameScene initialized", slog.String("sceneName", gs.GetName()))
 }
 
 // 初始化关卡
 func (gs *GameScene) InitLevel() bool {
 	// 加载关卡
-	if !NewLevelLoader().LoadLevel("assets/maps/level1.tmj", gs) {
+	if !escene.NewLevelLoader().LoadLevel("assets/maps/level1.tmj", gs) {
 		slog.Error("level1.tmj load failed")
 		return false
 	}
@@ -82,18 +84,18 @@ func (gs *GameScene) InitLevel() bool {
 		return false
 	}
 
-	gs.ctx.PhysicsEngine.RegisterTileLayerComponent(tileLayerComp)
+	gs.GetContext().PhysicsEngine.RegisterTileLayerComponent(tileLayerComp)
 	slog.Info("main layer registered to physics engine")
 
 	// 世界大小
 	worldSize := mainLayer.GetComponent(def.ComponentTypeTileLayer).(*component.TileLayerComponent).GetWorldSize()
 	// 设置相机限制范围
-	gs.ctx.Camera.SetLimitBounds(&emath.Rect{Position: mgl32.Vec2{0.0, 0.0}, Size: worldSize})
+	gs.GetContext().Camera.SetLimitBounds(&emath.Rect{Position: mgl32.Vec2{0.0, 0.0}, Size: worldSize})
 
 	// 设置世界边界
-	gs.ctx.PhysicsEngine.SetWorldBounds(&emath.Rect{Position: mgl32.Vec2{0.0, 0.0}, Size: worldSize})
+	gs.GetContext().PhysicsEngine.SetWorldBounds(&emath.Rect{Position: mgl32.Vec2{0.0, 0.0}, Size: worldSize})
 
-	slog.Debug("GameScene level initialized", slog.String("sceneName", gs.sceneName))
+	slog.Debug("GameScene level initialized", slog.String("sceneName", gs.GetName()))
 	return true
 }
 
@@ -119,7 +121,7 @@ func (gs *GameScene) InitPlayer() bool {
 		slog.Error("player object transform component not found")
 		return false
 	}
-	gs.ctx.Camera.SetTargetTC(transformComp)
+	gs.GetContext().Camera.SetTargetTC(transformComp)
 
 	slog.Debug("player object transform component set to camera target")
 	return true
@@ -132,26 +134,26 @@ func (gs *GameScene) InitEnemiesAndItem() bool {
 		gt := e.Value.(*object.GameObject)
 		switch gt.GetName() {
 		case "eagle":
-			ac := gt.GetComponent(def.ComponentTypeAnimation).(*component.AnimationComponent)
-			if ac == nil {
-				slog.Error("eagle object animation component not found")
-				success = false
+			aiCom := component.NewAIComponent()
+			if gt.AddComponent(aiCom) != nil {
+				yMax := gt.GetComponent(def.ComponentTypeTransform).(*component.TransformComponent).GetPosition().Y()
+				yMin := yMax - 80.0
+				aiCom.SetBehavior(ai.NewUpDownBehavior(yMin, yMax, 50.0))
 			}
-			ac.PlayAnimation("fly")
 		case "frog":
-			ac := gt.GetComponent(def.ComponentTypeAnimation).(*component.AnimationComponent)
-			if ac == nil {
-				slog.Error("frog object animation component not found")
-				success = false
+			aiCom := component.NewAIComponent()
+			if gt.AddComponent(aiCom) != nil {
+				xMax := gt.GetComponent(def.ComponentTypeTransform).(*component.TransformComponent).GetPosition().X() - 10.0
+				xMin := xMax - 90.0
+				aiCom.SetBehavior(ai.NewJumpBehavior(xMin, xMax, mgl32.Vec2{100.0, -300.0}, 2.0))
 			}
-			ac.PlayAnimation("idle")
 		case "opossum":
-			ac := gt.GetComponent(def.ComponentTypeAnimation).(*component.AnimationComponent)
-			if ac == nil {
-				slog.Error("opossum object animation component not found")
-				success = false
+			aiCom := component.NewAIComponent()
+			if gt.AddComponent(aiCom) != nil {
+				xMax := gt.GetComponent(def.ComponentTypeTransform).(*component.TransformComponent).GetPosition().X()
+				xMin := xMax - 200.0
+				aiCom.SetBehavior(ai.NewPatrolBehavior(xMin, xMax, 50.0))
 			}
-			ac.PlayAnimation("walk")
 		}
 
 		if gt.GetTag() == "item" {
@@ -168,7 +170,7 @@ func (gs *GameScene) InitEnemiesAndItem() bool {
 
 // 更新
 func (gs *GameScene) Update(dt float64) {
-	gs.scene.Update(dt)
+	gs.Scene.Update(dt)
 	// 处理游戏对象间的碰撞事件
 	gs.handleObjectCollisions()
 	// 处理瓦片触发事件
@@ -177,23 +179,23 @@ func (gs *GameScene) Update(dt float64) {
 
 // 渲染
 func (gs *GameScene) Render() {
-	gs.scene.Render()
+	gs.Scene.Render()
 }
 
 // 处理事件
 func (gs *GameScene) HandleInput() {
-	gs.scene.HandleInput()
+	gs.Scene.HandleInput()
 }
 
 // 清理
 func (gs *GameScene) Clean() {
-	gs.scene.Clean()
+	gs.Scene.Clean()
 }
 
 // 处理瓦片触发事件，从PhysicsEngine获取信息
 func (gs *GameScene) handleTileTriggers() {
 	// 从物理引擎获取触发事件
-	triggerEvents := gs.ctx.PhysicsEngine.GetTileTriggerEvents()
+	triggerEvents := gs.GetContext().PhysicsEngine.GetTileTriggerEvents()
 	for _, event := range triggerEvents {
 		// 瓦片触发事件的对象
 		obj := event.GameObject.(*object.GameObject)
@@ -212,7 +214,7 @@ func (gs *GameScene) handleTileTriggers() {
 // 处理游戏对象间的碰撞逻辑，从PhysicsEngine获取信息
 func (gs *GameScene) handleObjectCollisions() {
 	// 从物理引擎获取碰撞对
-	collisionPairs := gs.ctx.PhysicsEngine.GetCollisionPairs()
+	collisionPairs := gs.GetContext().PhysicsEngine.GetCollisionPairs()
 	for _, pair := range collisionPairs {
 		obj1 := pair.A.(*object.GameObject)
 		obj2 := pair.B.(*object.GameObject)
@@ -250,14 +252,14 @@ func (gs *GameScene) playerVSEnemyCollision(player, enemy *object.GameObject) {
 	// 踩踏判断成功，敌人受伤
 	if playerCenter.Y() < enemyCenter.Y() && overlap.X() > overlap.Y() {
 		slog.Info("player stomped on enemy", slog.String("playerName", player.GetName()), slog.String("enemyName", enemy.GetName()))
-		enemyHealthComp := enemy.GetComponent(def.ComponentTypeHealth).(*component.HealthComponent)
-		if enemyHealthComp == nil {
-			slog.Error("enemy health component not found", slog.String("enemyName", enemy.GetName()))
+		enemyAIComp := enemy.GetComponent(def.ComponentTypeAI).(*component.AIComponent)
+		if enemyAIComp == nil {
+			slog.Error("enemy AI component not found", slog.String("enemyName", enemy.GetName()))
 			return
 		}
 		// 造成1点伤害
-		enemyHealthComp.TakeDamage(1)
-		if !enemyHealthComp.IsAlive() {
+		enemyAIComp.TakeDamage(1)
+		if !enemyAIComp.IsAlive() {
 			slog.Info("enemy is dead", slog.String("enemyName", enemy.GetName()))
 			enemy.SetNeedRemove(true)
 			// 敌人死亡后，创建死亡特效
@@ -303,13 +305,13 @@ func (gs *GameScene) createEffect(centerPos mgl32.Vec2, tag string) {
 	animation := render.NewAnimation("effect", false)
 	switch tag {
 	case "enemy":
-		effectSprite := component.NewSpriteComponent("assets/textures/FX/enemy-deadth.png", gs.ctx.ResourceManager, utils.AlignCenter, nil, false)
+		effectSprite := component.NewSpriteComponent("assets/textures/FX/enemy-deadth.png", gs.GetContext().ResourceManager, utils.AlignCenter, nil, false)
 		effectObj.AddComponent(effectSprite)
 		for i := range 5 {
 			animation.AddFrame(&sdl.FRect{X: float32(i * 40), Y: 0.0, W: 40.0, H: 40.0}, 0.1)
 		}
 	case "item":
-		effectSprite := component.NewSpriteComponent("assets/textures/FX/item-feedback.png", gs.ctx.ResourceManager, utils.AlignCenter, nil, false)
+		effectSprite := component.NewSpriteComponent("assets/textures/FX/item-feedback.png", gs.GetContext().ResourceManager, utils.AlignCenter, nil, false)
 		effectObj.AddComponent(effectSprite)
 		for i := range 4 {
 			animation.AddFrame(&sdl.FRect{X: float32(i * 32), Y: 0.0, W: 32.0, H: 32.0}, 0.1)

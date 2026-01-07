@@ -40,7 +40,7 @@ type IScene interface {
 }
 
 // 基础场景
-type scene struct {
+type Scene struct {
 	// 场景名称
 	sceneName string
 	// 上下文
@@ -56,10 +56,10 @@ type scene struct {
 }
 
 // 确保实现了IScene接口
-var _ IScene = (*scene)(nil)
+var _ IScene = (*Scene)(nil)
 
 // 构建场景
-func buildScene(s *scene, sceneName string, ctx *econtext.Context, sceneManager *SceneManager) {
+func BuildScene(s *Scene, sceneName string, ctx *econtext.Context, sceneManager *SceneManager) {
 	s.sceneName = sceneName
 	s.ctx = ctx
 	s.sceneManager = sceneManager
@@ -69,7 +69,7 @@ func buildScene(s *scene, sceneName string, ctx *econtext.Context, sceneManager 
 }
 
 // 初始化场景
-func (s *scene) Init() {
+func (s *Scene) Init() {
 	if s.initialized {
 		slog.Warn("Scene already initialized", slog.String("sceneName", s.sceneName))
 		return
@@ -78,7 +78,7 @@ func (s *scene) Init() {
 }
 
 // 更新场景状态
-func (s *scene) Update(dt float64) {
+func (s *Scene) Update(dt float64) {
 	if !s.initialized {
 		slog.Warn("Scene not initialized", slog.String("sceneName", s.sceneName))
 		return
@@ -109,7 +109,7 @@ func (s *scene) Update(dt float64) {
 }
 
 // 处理待添加(延时添加)的游戏对象
-func (s *scene) processPendingAdditions() {
+func (s *Scene) processPendingAdditions() {
 	for _, gt := range s.pendingAdditions {
 		s.GameObjects.PushBack(gt)
 	}
@@ -117,7 +117,7 @@ func (s *scene) processPendingAdditions() {
 }
 
 // 渲染场景
-func (s *scene) Render() {
+func (s *Scene) Render() {
 	if !s.initialized {
 		slog.Warn("Scene not initialized", slog.String("sceneName", s.sceneName))
 		return
@@ -130,7 +130,7 @@ func (s *scene) Render() {
 }
 
 // 处理输入事件
-func (s *scene) HandleInput() {
+func (s *Scene) HandleInput() {
 	if !s.initialized {
 		slog.Warn("Scene not initialized", slog.String("sceneName", s.sceneName))
 		return
@@ -153,7 +153,7 @@ func (s *scene) HandleInput() {
 }
 
 // 清理场景
-func (s *scene) Clean() {
+func (s *Scene) Clean() {
 	if !s.initialized {
 		slog.Warn("Scene not initialized", slog.String("sceneName", s.sceneName))
 		return
@@ -170,7 +170,7 @@ func (s *scene) Clean() {
 }
 
 // 直接向场景中添加一个游戏对象，初始化时可用，游戏进行中不安全
-func (s *scene) AddGameObject(gt *object.GameObject) {
+func (s *Scene) AddGameObject(gt *object.GameObject) {
 	if !s.initialized {
 		slog.Warn("Scene not initialized", slog.String("sceneName", s.sceneName))
 		return
@@ -183,7 +183,7 @@ func (s *scene) AddGameObject(gt *object.GameObject) {
 }
 
 // 安全地添加游戏对象，添加到pending_additions中
-func (s *scene) SafeAddGameObject(gt *object.GameObject) {
+func (s *Scene) SafeAddGameObject(gt *object.GameObject) {
 	if !s.initialized {
 		slog.Warn("Scene not initialized", slog.String("sceneName", s.sceneName))
 		return
@@ -196,7 +196,7 @@ func (s *scene) SafeAddGameObject(gt *object.GameObject) {
 }
 
 // 直接从场景中移除一个游戏对象，一般不使用，但保留实现的逻辑
-func (s *scene) RemoveGameObject(gt *object.GameObject) {
+func (s *Scene) RemoveGameObject(gt *object.GameObject) {
 	if !s.initialized {
 		slog.Warn("Scene not initialized", slog.String("sceneName", s.sceneName))
 		return
@@ -218,22 +218,22 @@ func (s *scene) RemoveGameObject(gt *object.GameObject) {
 }
 
 // 安全地移除游戏对象，设置need_remove_标记
-func (s *scene) SafeRemoveGameObject(gt *object.GameObject) {
+func (s *Scene) SafeRemoveGameObject(gt *object.GameObject) {
 	gt.SetNeedRemove(true)
 }
 
 // 获取场景名称
-func (s *scene) GetName() string {
+func (s *Scene) GetName() string {
 	return s.sceneName
 }
 
 // 判断场景是否已初始化
-func (s *scene) IsInitialized() bool {
+func (s *Scene) IsInitialized() bool {
 	return s.initialized
 }
 
 // 根据名称查找游戏对象
-func (s *scene) FindGameObjectByName(name string) *object.GameObject {
+func (s *Scene) FindGameObjectByName(name string) *object.GameObject {
 	if !s.initialized {
 		slog.Warn("Scene not initialized", slog.String("sceneName", s.sceneName))
 		return nil
@@ -254,11 +254,11 @@ func (s *scene) FindGameObjectByName(name string) *object.GameObject {
 }
 
 // 获取资源管理器
-func (s *scene) GetResourceManager() *resource.ResourceManager {
+func (s *Scene) GetResourceManager() *resource.ResourceManager {
 	return s.ctx.ResourceManager
 }
 
 // 获取上下文
-func (s *scene) GetContext() *econtext.Context {
+func (s *Scene) GetContext() *econtext.Context {
 	return s.ctx
 }
