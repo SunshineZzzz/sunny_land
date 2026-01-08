@@ -237,3 +237,23 @@ func (r *Renderer) IsInViewport(camera physics.ICamera, rect sdl.FRect) bool {
 	return rect.X+rect.W >= 0.0 && rect.X <= viewportSize.X() &&
 		rect.Y+rect.H >= 0.0 && rect.Y <= viewportSize.Y()
 }
+
+/**
+ * @brief 绘制填充矩形
+ *
+ * @param rect 矩形区域
+ * @param color 填充颜色
+ */
+func (r *Renderer) DrawUIFilledRect(rect emath.Rect, color emath.FColor) {
+	r.SetDrawColorFloat(color.R, color.G, color.B, color.A)
+	sdlRect := sdl.FRect{
+		X: rect.Position.X(),
+		Y: rect.Position.Y(),
+		W: rect.Size.X(),
+		H: rect.Size.Y(),
+	}
+	if !sdl.RenderFillRect(r.sdlRenderer, &sdlRect) {
+		slog.Error("render fill rect failed", slog.Any("rect", sdlRect))
+	}
+	r.SetDrawColorFloat(0.0, 0.0, 0.0, 1.0)
+}

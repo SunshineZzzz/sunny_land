@@ -9,6 +9,7 @@ import (
 	"sunny_land/src/engine/physics"
 	"sunny_land/src/engine/render"
 	escene "sunny_land/src/engine/scene"
+	"sunny_land/src/engine/ui"
 	"sunny_land/src/engine/utils"
 	"sunny_land/src/engine/utils/def"
 	emath "sunny_land/src/engine/utils/math"
@@ -63,6 +64,13 @@ func (gs *GameScene) Init() {
 	// 初始化敌人和道具
 	if !gs.InitEnemiesAndItem() {
 		slog.Error("enemies and item init failed")
+		gs.GetContext().InputManager.SetShouldQuit(true)
+		return
+	}
+
+	// 初始化UI
+	if !gs.InitUI() {
+		slog.Error("ui init failed")
 		gs.GetContext().InputManager.SetShouldQuit(true)
 		return
 	}
@@ -189,6 +197,18 @@ func (gs *GameScene) InitEnemiesAndItem() bool {
 	return success
 }
 
+// 初始化UI
+func (gs *GameScene) InitUI() bool {
+	if !gs.UIManager.Init(mgl32.Vec2{640.0, 360.0}) {
+		return false
+	}
+
+	// 创建一个透明的方形UIPanel
+	gs.UIManager.AddElement(ui.NewUIPanel(mgl32.Vec2{100.0, 100.0}, mgl32.Vec2{200.0, 200.0}, &emath.FColor{R: 0.5, G: 0.0, B: 0.0, A: 0.3}))
+
+	return true
+}
+
 // 更新
 func (gs *GameScene) Update(dt float64) {
 	gs.Scene.Update(dt)
@@ -201,8 +221,6 @@ func (gs *GameScene) Update(dt float64) {
 // 渲染
 func (gs *GameScene) Render() {
 	gs.Scene.Render()
-	// 测试文本渲染
-	gs.testTextRenderer()
 }
 
 // 处理事件

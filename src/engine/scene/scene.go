@@ -7,6 +7,7 @@ import (
 	econtext "sunny_land/src/engine/context"
 	"sunny_land/src/engine/object"
 	"sunny_land/src/engine/resource"
+	"sunny_land/src/engine/ui"
 )
 
 // 场景接口，负责管理场景中的游戏对象和场景生命周期
@@ -47,6 +48,8 @@ type Scene struct {
 	ctx *econtext.Context
 	// 场景管理器
 	SceneManager *SceneManager
+	// UI管理器
+	UIManager *ui.UIManager
 	// 是否初始化
 	initialized bool
 	// 场景中的游戏对象容器
@@ -63,6 +66,7 @@ func BuildScene(s *Scene, sceneName string, ctx *econtext.Context, sceneManager 
 	s.sceneName = sceneName
 	s.ctx = ctx
 	s.SceneManager = sceneManager
+	s.UIManager = ui.NewUIManager()
 	s.initialized = false
 	s.GameObjects = list.New()
 	s.pendingAdditions = make([]*object.GameObject, 0)
@@ -104,6 +108,9 @@ func (s *Scene) Update(dt float64) {
 		e = next
 	}
 
+	// 更新UI管理器
+	s.UIManager.Update(dt, s.ctx)
+
 	// 处理待添加(延时添加)的游戏对象
 	s.processPendingAdditions()
 }
@@ -122,17 +129,27 @@ func (s *Scene) Render() {
 		slog.Warn("Scene not initialized", slog.String("sceneName", s.sceneName))
 		return
 	}
+
 	// 渲染所有游戏对象
 	for e := s.GameObjects.Front(); e != nil; e = e.Next() {
 		gt := e.Value.(*object.GameObject)
 		gt.Render(s.ctx)
 	}
+
+	// 渲染UI管理器
+	s.UIManager.Render(s.ctx)
 }
 
 // 处理输入事件
 func (s *Scene) HandleInput() {
 	if !s.initialized {
 		slog.Warn("Scene not initialized", slog.String("sceneName", s.sceneName))
+		return
+	}
+
+	// 处理UI管理器的输入事件
+	if s.UIManager.HandleInput(s.ctx) {
+		// 如果输入事件被UI处理则返回，不再处理游戏对象输入
 		return
 	}
 

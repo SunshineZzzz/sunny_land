@@ -18,6 +18,8 @@ type IRenderer interface {
 	DrawSpriteWithParallax(ICamera, ISprite, mgl32.Vec2, mgl32.Vec2, mgl32.Vec2, emath.Vec2B)
 	// 绘制精灵图
 	DrawSprite(ICamera, ISprite, mgl32.Vec2, mgl32.Vec2, float64)
+	// 绘制填充矩形
+	DrawUIFilledRect(emath.Rect, emath.FColor)
 }
 
 // 摄像机抽象

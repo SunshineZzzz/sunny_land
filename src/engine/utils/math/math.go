@@ -6,6 +6,11 @@ import (
 	"github.com/go-gl/mathgl/mgl32"
 )
 
+// float32 color
+type FColor struct {
+	R, G, B, A float32
+}
+
 // 数值类型
 type Number interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 |

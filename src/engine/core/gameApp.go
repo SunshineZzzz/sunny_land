@@ -142,6 +142,9 @@ func (g *GameApp) initSDL() bool {
 		return false
 	}
 
+	// 设置渲染器支持透明色
+	sdl.SetRenderDrawBlendMode(g.sdlRenderer, sdl.BlendModeBlend)
+
 	var vsyncMode int32 = sdl.RendererVSyncDisabled
 	if g.config.VsyncEnabled {
 		vsyncMode = sdl.RendererVSyncAdaptive
