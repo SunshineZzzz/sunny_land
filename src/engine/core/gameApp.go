@@ -93,7 +93,7 @@ func (g *GameApp) init() bool {
 	}
 
 	// 创建第一个场景
-	scene := escene.NewGameScene("level1", g.context, g.sceneManager)
+	scene := escene.NewGameScene(g.context, g.sceneManager, nil)
 	// 添加场景到场景管理器
 	g.sceneManager.RequestPushScene(scene)
 

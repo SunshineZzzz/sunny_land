@@ -77,3 +77,15 @@ func Mgl32Vec2Mix(current, target mgl32.Vec2, t float32) mgl32.Vec2 {
 	// 公式：A + (B - A) * t
 	return current.Add(target.Sub(current).Mul(t))
 }
+
+// clamp
+// 限制值在min和max之间
+func Clamp[T Number](value, min, max T) T {
+	if value < min {
+		return min
+	}
+	if value > max {
+		return max
+	}
+	return value
+}

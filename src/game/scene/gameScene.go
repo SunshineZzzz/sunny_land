@@ -14,6 +14,7 @@ import (
 	emath "sunny_land/src/engine/utils/math"
 	gcomponent "sunny_land/src/game/component"
 	"sunny_land/src/game/component/ai"
+	"sunny_land/src/game/data"
 
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
 	"github.com/go-gl/mathgl/mgl32"
@@ -25,13 +26,19 @@ type GameScene struct {
 	escene.Scene
 	// 保存玩家对象指针，方便访问
 	playerObject *object.GameObject
+	// 场景共享数据
+	sessionData *data.SessionData
 }
 
 // 创建游戏场景
-func NewGameScene(sceneName string, ctx *econtext.Context, sceneManager *escene.SceneManager) *GameScene {
+func NewGameScene(ctx *econtext.Context, sceneManager *escene.SceneManager, sd *data.SessionData) *GameScene {
 	gs := &GameScene{}
-	escene.BuildScene(&gs.Scene, sceneName, ctx, sceneManager)
-	slog.Debug("GameScene created", slog.String("sceneName", sceneName))
+	escene.BuildScene(&gs.Scene, "GameScene", ctx, sceneManager)
+	gs.sessionData = sd
+	if sd == nil {
+		gs.sessionData = data.NewSessionData()
+	}
+	slog.Debug("GameScene created")
 	return gs
 }
 
@@ -74,7 +81,7 @@ func (gs *GameScene) Init() {
 // 初始化关卡
 func (gs *GameScene) InitLevel() bool {
 	// 加载关卡
-	levelPath := gs.levelNameToPath(gs.GetName())
+	levelPath := gs.sessionData.GetMapPath()
 	if !escene.NewLevelLoader().LoadLevel(levelPath, gs) {
 		slog.Error("level1.tmj load failed")
 		return false
@@ -199,6 +206,7 @@ func (gs *GameScene) Render() {
 // 处理事件
 func (gs *GameScene) HandleInput() {
 	gs.Scene.HandleInput()
+	gs.testSaveAndLoad()
 }
 
 // 清理
@@ -218,11 +226,32 @@ func (gs *GameScene) handleTileTriggers() {
 		if tileType == physics.TileTypeHazard {
 			// 处理玩家与"hazard"对象的碰撞
 			if obj.GetName() == "player" {
-				obj.GetComponent(def.ComponentTypePlayer).(*gcomponent.PlayerComponent).TakeDamage(1)
+				gs.handlePlayerDamage(1)
 			}
 			// TODO: 其他对象类型的处理，目前让敌人无视瓦片伤害
 		}
 	}
+}
+
+// 处理玩家受伤，更新得分、UI等
+func (gs *GameScene) handlePlayerDamage(damage int) {
+	playerComAny := gs.playerObject.GetComponent(def.ComponentTypePlayer)
+	if playerComAny == nil {
+		slog.Error("player component not found")
+		return
+	}
+	playerCom := playerComAny.(*gcomponent.PlayerComponent)
+	if !playerCom.TakeDamage(damage) {
+		// 没有受伤，直接返回
+		return
+	}
+	if playerCom.IsDead() {
+		slog.Info("player dead", slog.String("name", gs.playerObject.GetName()))
+		// TODO: 可能的死亡逻辑处理
+	}
+	// 更新游戏数据(生命值)
+	healthCom := gs.playerObject.GetComponent(def.ComponentTypeHealth).(*component.HealthComponent)
+	gs.sessionData.SetCurrentHealth(healthCom.GetCurHealth())
 }
 
 // 处理游戏对象间的碰撞逻辑，从PhysicsEngine获取信息
@@ -263,7 +292,10 @@ func (gs *GameScene) handleObjectCollisions() {
 // 进入下一个关卡
 func (gs *GameScene) toNextLevel(trigger *object.GameObject) {
 	sceneName := trigger.GetName()
-	nextScene := NewGameScene(sceneName, gs.GetContext(), gs.SceneManager)
+	mapPath := gs.levelNameToPath(sceneName)
+	// 设置下一个关卡信息
+	gs.sessionData.SetNextLevel(mapPath)
+	nextScene := NewGameScene(gs.GetContext(), gs.SceneManager, gs.sessionData)
 	gs.SceneManager.RequestReplaceScene(nextScene)
 }
 
@@ -291,6 +323,8 @@ func (gs *GameScene) playerVSEnemyCollision(player, enemy *object.GameObject) {
 			enemy.SetNeedRemove(true)
 			// 敌人死亡后，创建死亡特效
 			gs.createEffect(enemyCenter, enemy.GetTag())
+			// 加分
+			gs.sessionData.AddScore(10)
 		}
 		// 玩家跳起效果
 		player.GetComponent(def.ComponentTypePhysics).(*component.PhysicsComponent).Velocity[1] = -300.0
@@ -300,7 +334,7 @@ func (gs *GameScene) playerVSEnemyCollision(player, enemy *object.GameObject) {
 		// 踩踏失败，玩家受伤
 		slog.Info("player failed to stomp on enemy", slog.String("playerName", player.GetName()), slog.String("enemyName", enemy.GetName()))
 		player.GetComponent(def.ComponentTypePlayer).(*gcomponent.PlayerComponent).TakeDamage(1)
-		// TODO 其他受伤逻辑
+		gs.handlePlayerDamage(1)
 	}
 }
 
@@ -310,7 +344,8 @@ func (gs *GameScene) playerVSItemCollision(player, item *object.GameObject) {
 		// 加血
 		player.GetComponent(def.ComponentTypeHealth).(*component.HealthComponent).Heal(1)
 	} else if item.GetName() == "gem" {
-		// TODO: 加分
+		// 加分
+		gs.sessionData.AddScore(5)
 	}
 	// 标记道具为待删除状态
 	item.SetNeedRemove(true)
@@ -359,4 +394,16 @@ func (gs *GameScene) createEffect(centerPos mgl32.Vec2, tag string) {
 	animationComponent.SetOneShotRemoval(true)
 	animationComponent.PlayAnimation("effect")
 	gs.SafeAddGameObject(effectObj)
+}
+
+func (gs *GameScene) testSaveAndLoad() {
+	inputManager := gs.GetContext().GetInputManager()
+	if inputManager.IsActionPressed("attack") {
+		gs.sessionData.SaveToFile("assets/save.json")
+	}
+	if inputManager.IsActionPressed("pause") {
+		gs.sessionData.LoadFromFile("assets/save.json")
+		slog.Info("current health", slog.Int("health", gs.sessionData.GetCurrentHealth()))
+		slog.Info("current score", slog.Int("score", gs.sessionData.GetCurrentScore()))
+	}
 }
