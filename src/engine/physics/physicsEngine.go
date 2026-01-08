@@ -238,6 +238,8 @@ type ITileLayerComponent interface {
 	GetTileSize() mgl32.Vec2
 	// 获取指定位置的瓦片类型，pos不是整数坐标
 	GetTileTypeAt(int, int) TileType
+	// 设置物理引擎
+	SetPhysicsEngine(*PhysicsEngine)
 }
 
 // 碰撞组件对
@@ -304,6 +306,7 @@ func (pe *PhysicsEngine) UnregisterComponent(component IPhysicsComponent) {
 // 注册瓦片图层组件
 func (pe *PhysicsEngine) RegisterTileLayerComponent(component ITileLayerComponent) {
 	slog.Debug("register tile layer component")
+	component.SetPhysicsEngine(pe)
 	pe.tileLayerComponents = append(pe.tileLayerComponents, component)
 }
 

@@ -74,7 +74,8 @@ func (gs *GameScene) Init() {
 // 初始化关卡
 func (gs *GameScene) InitLevel() bool {
 	// 加载关卡
-	if !escene.NewLevelLoader().LoadLevel("assets/maps/level1.tmj", gs) {
+	levelPath := gs.levelNameToPath(gs.GetName())
+	if !escene.NewLevelLoader().LoadLevel(levelPath, gs) {
 		slog.Error("level1.tmj load failed")
 		return false
 	}
@@ -105,6 +106,11 @@ func (gs *GameScene) InitLevel() bool {
 
 	slog.Debug("GameScene level initialized", slog.String("sceneName", gs.GetName()))
 	return true
+}
+
+// 根据关卡名称获取对应的地图文件路径
+func (gs *GameScene) levelNameToPath(levelName string) string {
+	return "assets/maps/" + levelName + ".tmj"
 }
 
 // 初始化玩家
@@ -245,7 +251,20 @@ func (gs *GameScene) handleObjectCollisions() {
 		} else if obj1.GetTag() == "hazard" && obj2.GetTag() == "player" {
 			obj2.GetComponent(def.ComponentTypePlayer).(*gcomponent.PlayerComponent).TakeDamage(1)
 		}
+		// 处理玩家与关底触发器碰撞
+		if obj1.GetName() == "player" && obj2.GetTag() == "next_level" {
+			gs.toNextLevel(obj2)
+		} else if obj1.GetTag() == "next_level" && obj2.GetName() == "player" {
+			gs.toNextLevel(obj1)
+		}
 	}
+}
+
+// 进入下一个关卡
+func (gs *GameScene) toNextLevel(trigger *object.GameObject) {
+	sceneName := trigger.GetName()
+	nextScene := NewGameScene(sceneName, gs.GetContext(), gs.SceneManager)
+	gs.SceneManager.RequestReplaceScene(nextScene)
 }
 
 // 玩家与敌人碰撞处理

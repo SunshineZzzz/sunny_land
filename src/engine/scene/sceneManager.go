@@ -147,16 +147,19 @@ func (sm *SceneManager) replaceScene(scene IScene) {
 		return
 	}
 
+	// 清理并移除场景栈中所有场景
 	for i, s := range sm.sceneStack {
 		s.Clean()
 		sm.sceneStack[i] = nil
 	}
 	sm.sceneStack = sm.sceneStack[:0]
 
+	// 初始化新场景
 	if !scene.IsInitialized() {
 		scene.Init()
 	}
 
+	// 将新场景压入栈顶
 	sm.sceneStack = append(sm.sceneStack, scene)
 	slog.Debug("replace scene", slog.String("scene", scene.GetName()))
 }

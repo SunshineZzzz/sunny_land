@@ -333,7 +333,65 @@ func (ll *LevelLoader) loadObjectLayer(layer *simplejson.Json, scene IScene) {
 		gid := obj.Get("gid").MustInt(0)
 		if gid == 0 {
 			// 如果gid为0(即不存在)，则代表自己绘制的形状(可能是碰撞盒、触发器等，未来按需处理)
-			continue
+			// 非矩形对象会有额外标识（目前不考虑）
+			if obj.Get("point").MustBool(false) {
+				// TODO: 点对象的处理方式
+				continue
+			} else if obj.Get("ellipse").MustBool(false) {
+				// TODO: 椭圆对象的处理方式
+				continue
+			} else if obj.Get("polygon").MustBool(false) {
+				// TODO: 多边形对象的处理方式
+				continue
+			} else {
+				// 矩形对象
+				// 创建游戏对象并添加TransfromComponent
+				objectName := obj.Get("name").MustString("Unnamed")
+				gameObject := object.NewGameObject(objectName, objectName)
+				// 创建变换组件
+				// 获取构建变换组件的信息
+				position := mgl32.Vec2{
+					float32(obj.Get("x").MustFloat64(0.0)),
+					float32(obj.Get("y").MustFloat64(0.0)),
+				}
+				rotation := obj.Get("rotation").MustFloat64(0.0)
+				// 创建变换组件
+				transformCom := component.NewTransformComponent(position, mgl32.Vec2{1.0, 1.0}, rotation)
+				// 添加到游戏对象中
+				if gameObject.AddComponent(transformCom) == nil {
+					slog.Error("add transform component failed", slog.String("layerName", layer.Get("name").MustString("Unnamed")))
+					continue
+				}
+				// 获取绘制的目标大小
+				dstSize := mgl32.Vec2{
+					float32(obj.Get("width").MustFloat64(0.0)),
+					float32(obj.Get("height").MustFloat64(0.0)),
+				}
+				// 创建碰撞体
+				collider := physics.NewAABBCollider(dstSize)
+				// 创建碰撞组件
+				colliderCom := component.NewColliderComponent(collider, utils.AlignNone, mgl32.Vec2{0.0, 0.0}, false, true)
+				if gameObject.AddComponent(colliderCom) == nil {
+					slog.Error("add collider component failed", slog.String("layerName", layer.Get("name").MustString("Unnamed")))
+					continue
+				}
+				colliderCom.SetTrigger(obj.Get("trigger").MustBool(true))
+				// 创建物理组件
+				physicsCom := component.NewPhysicsComponent(scene.GetContext().PhysicsEngine, 1.0, false)
+				if gameObject.AddComponent(physicsCom) == nil {
+					slog.Error("add physics component failed", slog.String("layerName", layer.Get("name").MustString("Unnamed")))
+					continue
+				}
+				// 获取标签信息并设置
+				tag := ll.getTileProperty(obj, "tag")
+				if tag != nil {
+					gameObject.SetTag(tag.(string))
+				}
+				// 添加到场景中
+				scene.AddGameObject(gameObject)
+				slog.Info("add game object to scene", slog.String("objectName", objectName))
+				continue
+			}
 		}
 		tileInfo := ll.getTileInfoByGId(gid)
 		if tileInfo.Sprite.GetTextureId() == "" {

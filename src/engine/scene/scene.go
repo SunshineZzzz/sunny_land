@@ -46,7 +46,7 @@ type Scene struct {
 	// 上下文
 	ctx *econtext.Context
 	// 场景管理器
-	sceneManager *SceneManager
+	SceneManager *SceneManager
 	// 是否初始化
 	initialized bool
 	// 场景中的游戏对象容器
@@ -62,7 +62,7 @@ var _ IScene = (*Scene)(nil)
 func BuildScene(s *Scene, sceneName string, ctx *econtext.Context, sceneManager *SceneManager) {
 	s.sceneName = sceneName
 	s.ctx = ctx
-	s.sceneManager = sceneManager
+	s.SceneManager = sceneManager
 	s.initialized = false
 	s.GameObjects = list.New()
 	s.pendingAdditions = make([]*object.GameObject, 0)
