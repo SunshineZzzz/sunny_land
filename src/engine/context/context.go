@@ -3,6 +3,7 @@ package context
 import (
 	"log/slog"
 
+	"sunny_land/src/engine/audio"
 	"sunny_land/src/engine/input"
 	"sunny_land/src/engine/physics"
 	"sunny_land/src/engine/render"
@@ -22,6 +23,8 @@ type Context struct {
 	Camera *render.Camera
 	// 物理引擎
 	PhysicsEngine *physics.PhysicsEngine
+	// 音频播放器
+	AudioPlayer *audio.AudioPlayer
 }
 
 // 确保实现IContext接口
@@ -30,7 +33,7 @@ var _ physics.IContext = (*Context)(nil)
 // 创建上下文对象
 func NewContext(inputManager *input.InputManager, renderer *render.Renderer,
 	resourceManager *resource.ResourceManager, camera *render.Camera,
-	physicsEngine *physics.PhysicsEngine) *Context {
+	physicsEngine *physics.PhysicsEngine, audioPlayer *audio.AudioPlayer) *Context {
 	slog.Debug("create context")
 	return &Context{
 		InputManager:    inputManager,
@@ -38,6 +41,7 @@ func NewContext(inputManager *input.InputManager, renderer *render.Renderer,
 		ResourceManager: resourceManager,
 		Camera:          camera,
 		PhysicsEngine:   physicsEngine,
+		AudioPlayer:     audioPlayer,
 	}
 }
 
@@ -54,4 +58,14 @@ func (c *Context) GetCamera() physics.ICamera {
 // 获取输入管理器
 func (c *Context) GetInputManager() input.InputManager {
 	return *c.InputManager
+}
+
+// 获取物理引擎
+func (c *Context) GetPhysicsEngine() physics.PhysicsEngine {
+	return *c.PhysicsEngine
+}
+
+// 获取音频播放器
+func (c *Context) GetAudioPlayer() *audio.AudioPlayer {
+	return c.AudioPlayer
 }

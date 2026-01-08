@@ -23,6 +23,8 @@ const (
 	ComponentTypeHealth
 	// AI组件
 	ComponentTypeAI
+	// 音频组件
+	ComponentTypeAudio
 
 	// 玩家组件
 	ComponentTypePlayer

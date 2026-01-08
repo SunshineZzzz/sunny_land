@@ -46,6 +46,12 @@ func (hs *HurtState) Enter() {
 	}
 	// 设置击退速度
 	physicsCom.Velocity = knockbackVelocity
+
+	audioComponent := hs.playerCom.GetOwner().GetComponent(def.ComponentTypeAudio).(*eComponent.AudioComponent)
+	if audioComponent != nil {
+		// 播放受伤音效
+		audioComponent.PlaySound("hurt", false)
+	}
 }
 
 // 离开状态

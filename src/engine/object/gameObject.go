@@ -83,7 +83,7 @@ func (gt *GameObject) GetComponent(componentType def.ComponentType) physics.ICom
 	if component, exists := gt.components[componentType]; exists {
 		return component
 	}
-	slog.Error("component not found in game object", slog.String("gameObject.Name", gt.name), slog.String("gameObject.Tag", gt.tag),
+	slog.Warn("component not found in game object", slog.String("gameObject.Name", gt.name), slog.String("gameObject.Tag", gt.tag),
 		slog.Any("componentType", componentType))
 	return nil
 }

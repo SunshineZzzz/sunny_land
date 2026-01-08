@@ -467,6 +467,26 @@ func (ll *LevelLoader) loadObjectLayer(layer *simplejson.Json, scene IScene) {
 			ll.addAnimation(animationJson, animationCom, srcSize)
 		}
 
+		// 获取音效消息并设置
+		soundString := ll.getTileProperty(tileJson, "sound")
+		if soundString != nil {
+			// 解析音效json字符串
+			soundJson, err := simplejson.NewJson([]byte(soundString.(string)))
+			if err != nil {
+				slog.Error("parse sound json failed", slog.String("layerName", layer.Get("name").MustString("Unnamed")), slog.String("error", err.Error()))
+				continue
+			}
+			// 创建音频组件
+			audioCom := component.NewAudioComponent(scene.GetContext().AudioPlayer, scene.GetContext().Camera)
+			// 添加音频组件到游戏对象中
+			if gameObject.AddComponent(audioCom) == nil {
+				slog.Error("add audio component failed", slog.String("layerName", layer.Get("name").MustString("Unnamed")))
+				continue
+			}
+			// 添加音效到音频组件中
+			ll.addSound(soundJson, audioCom)
+		}
+
 		// 获取生命值信息并且设置
 		health := ll.getTileProperty(tileJson, "health")
 		if health != nil {
@@ -485,6 +505,29 @@ func (ll *LevelLoader) loadObjectLayer(layer *simplejson.Json, scene IScene) {
 		// 游戏对象添加到场景中
 		scene.AddGameObject(gameObject)
 		slog.Info("add game object to scene", slog.String("gameObjectName", name))
+	}
+}
+
+/**
+ * @brief 添加音效到指定的 AudioComponent。
+ * @param sound_json 音效json数据（自定义）
+ * @param audio_component AudioComponent 指针（音效添加到此组件）
+ */
+func (ll *LevelLoader) addSound(soundJson *simplejson.Json, ac *component.AudioComponent) {
+	if soundJson == nil || ac == nil {
+		slog.Error("sound json or audio component is nil")
+		return
+	}
+
+	// 遍历音效JSON对象中的每个键值对(音效名称:音效路径)
+	for soundName := range soundJson.MustMap() {
+		soundPath := soundJson.Get(soundName).MustString("")
+		if soundPath == "" {
+			slog.Error("sound path is empty", slog.String("soundName", soundName))
+			continue
+		}
+		// 添加音效到音频组件中
+		ac.AddSound(soundName, soundPath)
 	}
 }
 

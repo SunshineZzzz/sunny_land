@@ -3,6 +3,7 @@ package core
 import (
 	"log/slog"
 
+	"sunny_land/src/engine/audio"
 	econtext "sunny_land/src/engine/context"
 	"sunny_land/src/engine/input"
 	"sunny_land/src/engine/physics"
@@ -41,6 +42,8 @@ type GameApp struct {
 	sceneManager *scene.SceneManager
 	// 物理引擎
 	physicsEngine *physics.PhysicsEngine
+	// 音频播放器
+	audioPlayer *audio.AudioPlayer
 }
 
 // 创建游戏应用
@@ -82,8 +85,8 @@ func (g *GameApp) Destroy() {
 // 初始化
 func (g *GameApp) init() bool {
 	if !g.initConfig() || !g.initSDL() || !g.initTimer() ||
-		!g.initResourceManager() || !g.initRenderer() ||
-		!g.initCamera() || !g.initInputManager() ||
+		!g.initResourceManager() || !g.initAudioPlayer() ||
+		!g.initRenderer() || !g.initCamera() || !g.initInputManager() ||
 		!g.initPhysicsEngine() || !g.initContext() ||
 		!g.initSceneManager() {
 		return false
@@ -193,7 +196,7 @@ func (g *GameApp) initInputManager() bool {
 
 // 初始化上下文对象
 func (g *GameApp) initContext() bool {
-	g.context = econtext.NewContext(g.inputManager, g.renderer, g.resourceManager, g.camera, g.physicsEngine)
+	g.context = econtext.NewContext(g.inputManager, g.renderer, g.resourceManager, g.camera, g.physicsEngine, g.audioPlayer)
 	slog.Debug("context init success")
 	return true
 }
@@ -209,6 +212,13 @@ func (g *GameApp) initSceneManager() bool {
 func (g *GameApp) initPhysicsEngine() bool {
 	g.physicsEngine = physics.NewPhysicsEngine()
 	slog.Debug("physics engine init success")
+	return true
+}
+
+// 初始化音频播放器
+func (g *GameApp) initAudioPlayer() bool {
+	g.audioPlayer = audio.NewAudioPlayer(g.resourceManager)
+	slog.Debug("audio player init success")
 	return true
 }
 

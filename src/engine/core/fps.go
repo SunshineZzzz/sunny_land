@@ -57,7 +57,9 @@ func (f *FPS) limitFrameRate(currentDeltaTime float64) {
 		f.deltaTime = float64(sdl.GetTicksNS()-f.lastFrameTime) / 1e9
 		return
 	}
-	f.deltaTime = currentDeltaTime
+	// f.deltaTime = currentDeltaTime
+	// 当前帧耗费的时间大于等于目标每帧时间，直接设置delta time为目标每帧时间
+	f.deltaTime = f.targetFrameTime
 }
 
 // 获取当前帧的delta time

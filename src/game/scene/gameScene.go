@@ -60,6 +60,14 @@ func (gs *GameScene) Init() {
 		return
 	}
 
+	// 设置音量
+	// 设置背景音乐音量为20%
+	gs.GetContext().AudioPlayer.SetMusicVolume(0.2)
+	// 设置音效音量为50%
+	gs.GetContext().AudioPlayer.SetSoundVolume(0.5)
+	// 播放背景音乐
+	gs.GetContext().AudioPlayer.PlayMusic("assets/audio/hurry_up_and_run.ogg", true)
+
 	slog.Debug("GameScene initialized", slog.String("sceneName", gs.GetName()))
 }
 
@@ -267,6 +275,8 @@ func (gs *GameScene) playerVSEnemyCollision(player, enemy *object.GameObject) {
 		}
 		// 玩家跳起效果
 		player.GetComponent(def.ComponentTypePhysics).(*component.PhysicsComponent).Velocity[1] = -300.0
+		// 播放音效，此音效完全可以放在玩家的音频组件中，这里示例另一种用法：直接用AudioPlayer播放，传入文件路径
+		gs.GetContext().GetAudioPlayer().PlaySound("assets/audio/punch2a.mp3")
 	} else {
 		// 踩踏失败，玩家受伤
 		slog.Info("player failed to stomp on enemy", slog.String("playerName", player.GetName()), slog.String("enemyName", enemy.GetName()))
@@ -288,6 +298,8 @@ func (gs *GameScene) playerVSItemCollision(player, item *object.GameObject) {
 	itemAABB := item.GetComponent(def.ComponentTypeCollider).(*component.ColliderComponent).GetWorldAABB()
 	// 创建特效
 	gs.createEffect(itemAABB.Position.Add(itemAABB.Size.Mul(0.5)), item.GetTag())
+	// 播放音效，此音效完全可以放在玩家的音频组件中，这里示例另一种用法：直接用AudioPlayer播放，传入文件路径
+	gs.GetContext().GetAudioPlayer().PlaySound("assets/audio/poka01.mp3")
 }
 
 /**

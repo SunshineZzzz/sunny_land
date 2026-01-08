@@ -40,6 +40,12 @@ func (ds *DeadState) Enter() {
 	if colliderCom != nil {
 		colliderCom.SetActive(false)
 	}
+
+	audioComponent := ds.playerCom.GetOwner().GetComponent(def.ComponentTypeAudio).(*eComponent.AudioComponent)
+	if audioComponent != nil {
+		// 播放死亡音效
+		audioComponent.PlaySound("dead", false)
+	}
 }
 
 // 退出状态

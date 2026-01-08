@@ -61,6 +61,11 @@ func (rm *ResourceManager) GetSound(path string) *[]IAudio {
 	return rm.audioManager.GetSound(path)
 }
 
+// 加载音效
+func (rm *ResourceManager) LoadSound(path string) *[]IAudio {
+	return rm.audioManager.loadSound(path)
+}
+
 // 卸载音效
 func (rm *ResourceManager) UnloadSound(path string) {
 	rm.audioManager.UnloadSound(path)
@@ -71,6 +76,11 @@ func (rm *ResourceManager) GetMusic(path string) *[]IAudio {
 	return rm.audioManager.GetMusic(path)
 }
 
+// 加载音乐
+func (rm *ResourceManager) LoadMusic(path string) *[]IAudio {
+	return rm.audioManager.loadMusic(path)
+}
+
 // 卸载音乐
 func (rm *ResourceManager) UnloadMusic(path string) {
 	rm.audioManager.UnloadMusic(path)
@@ -79,4 +89,24 @@ func (rm *ResourceManager) UnloadMusic(path string) {
 // 获取纹理大小
 func (rm *ResourceManager) GetTextureSize(path string) *sdl.FRect {
 	return rm.textureManager.GetTextureSize(path)
+}
+
+// 设置音效音量
+func (rm *ResourceManager) SetSoundVolume(volume float32) {
+	rm.audioManager.SetSoundVolume(volume)
+}
+
+// 获取音效音量
+func (rm *ResourceManager) GetSoundVolume() float32 {
+	return rm.audioManager.GetSoundVolume()
+}
+
+// 设置音乐音量
+func (rm *ResourceManager) SetMusicVolume(volume float32) {
+	rm.audioManager.SetMusicVolume(volume)
+}
+
+// 获取音乐音量
+func (rm *ResourceManager) GetMusicVolume() float32 {
+	return rm.audioManager.GetMusicVolume()
 }

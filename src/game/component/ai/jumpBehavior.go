@@ -69,8 +69,9 @@ func (jb *JumpBehavior) Update(dt float64, aiComponent *component.AIComponent) {
 	transformComponent := aiComponent.Owner.GetComponent(def.ComponentTypeTransform).(*component.TransformComponent)
 	spriteComponent := aiComponent.Owner.GetComponent(def.ComponentTypeSprite).(*component.SpriteComponent)
 	animationComponent := aiComponent.Owner.GetComponent(def.ComponentTypeAnimation).(*component.AnimationComponent)
+	audioComponent := aiComponent.Owner.GetComponent(def.ComponentTypeAudio).(*component.AudioComponent)
 	if physicComponent == nil || transformComponent == nil || spriteComponent == nil || animationComponent == nil {
-		slog.Error("jump behavior owner must have physics, transform, sprite and animation component")
+		slog.Error("jump behavior owner must have physics, transform, sprite, animation component")
 		return
 	}
 
@@ -78,6 +79,11 @@ func (jb *JumpBehavior) Update(dt float64, aiComponent *component.AIComponent) {
 	isOnGround := physicComponent.HasCollidedBelow()
 	if isOnGround {
 		// 在地面上
+		// 刚刚落地时，进入idle状态，如果有音频组件，播放音效
+		if audioComponent != nil && jb.jumpTimer < 0.001 {
+			// 使用空间音频
+			audioComponent.PlaySound("cry", true)
+		}
 		// 增加跳跃定时器
 		jb.jumpTimer += dt
 		// 停止水平移动

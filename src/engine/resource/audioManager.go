@@ -6,13 +6,21 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sunny_land/src/engine/utils"
 	"sync"
 	"unsafe"
+
+	"sunny_land/src/engine/utils"
 
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
 	"github.com/hajimehoshi/go-mp3"
 	"github.com/jfreymuth/oggvorbis"
+)
+
+var (
+	// 音效音量大小
+	GSoundVolume = float32(1.0)
+	// 音乐音量大小
+	GMusicVolume = float32(1.0)
 )
 
 // 声音类型
@@ -41,6 +49,12 @@ type IAudio interface {
 	Close()
 	// 获取音频类型
 	GetAudioType() AudioType
+	// 设置音量，范围0.0-1.0
+	SetVolume(volume float32)
+	// 获取当前音量
+	GetVolume() float32
+	// 是否正在播放
+	IsPlaying() bool
 }
 
 // 全局音频句柄管理
@@ -225,6 +239,38 @@ func (am *audioManager) UnloadMusic(filePath string) {
 	delete(am.musics, filePath)
 }
 
+// 设置音效音量
+func (am *audioManager) SetSoundVolume(volume float32) {
+	if volume < 0.0 {
+		volume = 0.0
+	} else if volume > 1.0 {
+		volume = 1.0
+	}
+
+	GSoundVolume = volume
+}
+
+// 设置音乐音量
+func (am *audioManager) SetMusicVolume(volume float32) {
+	if volume < 0.0 {
+		volume = 0.0
+	} else if volume > 1.0 {
+		volume = 1.0
+	}
+
+	GMusicVolume = volume
+}
+
+// 获取音效音量
+func (am *audioManager) GetSoundVolume() float32 {
+	return GSoundVolume
+}
+
+// 获取音乐音量
+func (am *audioManager) GetMusicVolume() float32 {
+	return GMusicVolume
+}
+
 // OGG格式音频
 type oggAudio struct {
 	// 锁
@@ -246,6 +292,8 @@ type oggAudio struct {
 	// 音频规格
 	sampleRate int32
 	channels   int32
+	// 音量
+	volume float32
 }
 
 var _ IAudio = (*oggAudio)(nil)
@@ -281,6 +329,11 @@ func newOggAudio(audioFilePath string, audioType AudioType) (*oggAudio, error) {
 		Format:   sdl.AudioF32,
 	}
 
+	volume := GSoundVolume
+	if audioType == AudioTypeMusic {
+		volume = GMusicVolume
+	}
+
 	callback := sdl.NewAudioStreamCallback(oggAudioCallback)
 	ogg := &oggAudio{
 		audioType:  audioType,
@@ -290,6 +343,7 @@ func newOggAudio(audioFilePath string, audioType AudioType) (*oggAudio, error) {
 		loop:       false,
 		sampleRate: int32(oggReader.SampleRate()),
 		channels:   int32(oggReader.Channels()),
+		volume:     volume,
 	}
 	ogg.id = registerAudio(ogg)
 
@@ -370,6 +424,7 @@ func (o *oggAudio) Play() bool {
 	o.isPlaying = true
 	o.dataPos = 0
 	sdl.ClearAudioStream(o.stream)
+	sdl.SetAudioStreamGain(o.stream, o.volume)
 	sdl.ResumeAudioStreamDevice(o.stream)
 
 	return true
@@ -453,6 +508,42 @@ func (o *oggAudio) GetAudioType() AudioType {
 	return o.audioType
 }
 
+// 设置音量，范围0.0-1.0
+func (o *oggAudio) SetVolume(volume float32) {
+	if volume < 0.0 {
+		volume = 0.0
+	} else if volume > 1.0 {
+		volume = 1.0
+	}
+
+	o.Lock()
+	defer o.Unlock()
+
+	if o.stream == nil || o.id == 0 {
+		return
+	}
+
+	o.volume = volume
+	// 设置音量
+	sdl.SetAudioStreamGain(o.stream, o.volume)
+}
+
+// 获取当前音量
+func (o *oggAudio) GetVolume() float32 {
+	o.Lock()
+	defer o.Unlock()
+
+	return o.volume
+}
+
+// 是否正在播放
+func (o *oggAudio) IsPlaying() bool {
+	o.Lock()
+	defer o.Unlock()
+
+	return o.isPlaying
+}
+
 // wav格式音频
 type wavAudio struct {
 	// 锁
@@ -475,10 +566,12 @@ type wavAudio struct {
 	spec *sdl.AudioSpec
 	// id
 	id uint32
+	// 音量
+	volume float32
 }
 
 // 创建wav音频
-func newWavAudio(soundFilePath string, soundType AudioType) (*wavAudio, error) {
+func newWavAudio(soundFilePath string, audioType AudioType) (*wavAudio, error) {
 	// 打开文件IO流
 	ioStream := sdl.IOFromFile(soundFilePath, "rb")
 	if ioStream == nil {
@@ -497,14 +590,20 @@ func newWavAudio(soundFilePath string, soundType AudioType) (*wavAudio, error) {
 		return nil, fmt.Errorf("failed to load WAV data: %s", sdl.GetError())
 	}
 
+	volume := GSoundVolume
+	if audioType == AudioTypeMusic {
+		volume = GMusicVolume
+	}
+
 	wav := &wavAudio{
-		audioType: soundType,
+		audioType: audioType,
 		audioBuf:  audioBuf,
 		audioLen:  int(audioLen),
 		spec:      spec,
 		dataPos:   0,
 		isPlaying: false,
 		loop:      false,
+		volume:    volume,
 	}
 
 	// 注册WAV播放器
@@ -593,6 +692,7 @@ func (w *wavAudio) Play() bool {
 	w.isPlaying = true
 	w.dataPos = 0
 	sdl.ClearAudioStream(w.stream)
+	sdl.SetAudioStreamGain(w.stream, w.volume)
 	sdl.ResumeAudioStreamDevice(w.stream)
 
 	return true
@@ -682,6 +782,37 @@ func (w *wavAudio) GetAudioType() AudioType {
 	return w.audioType
 }
 
+// 设置音量
+func (w *wavAudio) SetVolume(volume float32) {
+	if volume < 0.0 {
+		volume = 0.0
+	} else if volume > 1.0 {
+		volume = 1.0
+	}
+
+	w.Lock()
+	defer w.Unlock()
+
+	w.volume = volume
+	sdl.SetAudioStreamGain(w.stream, volume)
+}
+
+// 获取当前音量
+func (w *wavAudio) GetVolume() float32 {
+	w.Lock()
+	defer w.Unlock()
+
+	return w.volume
+}
+
+// 是否正在播放
+func (w *wavAudio) IsPlaying() bool {
+	w.Lock()
+	defer w.Unlock()
+
+	return w.isPlaying
+}
+
 // mp3格式音频
 type mp3Audio struct {
 	// 锁
@@ -703,6 +834,8 @@ type mp3Audio struct {
 	// 音频规格
 	sampleRate int32
 	channels   int32
+	// 音量
+	volume float32
 }
 
 var _ IAudio = (*mp3Audio)(nil)
@@ -719,23 +852,31 @@ func newMp3Audio(audioFilePath string, audioType AudioType) (*mp3Audio, error) {
 		return nil, fmt.Errorf("failed to create oggvorbis reader, %v, %v", audioFilePath, err)
 	}
 
-	pcmData := make([]byte, 1024*1024)
-	totalSamples := 0
+	// 动态读取完整数据
+	var pcmData []byte
+	buf := make([]byte, 4096)
 	for {
-		n, err := d.Read(pcmData[totalSamples:])
+		n, err := d.Read(buf)
 		if err != nil && err.Error() != "EOF" {
 			return nil, fmt.Errorf("failed to read mp3 data, %v, %v", audioFilePath, err)
+		}
+		if n > 0 {
+			pcmData = append(pcmData, buf[:n]...)
 		}
 		if n == 0 {
 			break
 		}
-		totalSamples += n
 	}
 
 	spec := &sdl.AudioSpec{
 		Freq:     int32(d.SampleRate()),
 		Channels: 2,
 		Format:   sdl.AudioS16,
+	}
+
+	volume := GSoundVolume
+	if audioType == AudioTypeMusic {
+		volume = GMusicVolume
 	}
 
 	callback := sdl.NewAudioStreamCallback(mp3AudioCallback)
@@ -747,6 +888,7 @@ func newMp3Audio(audioFilePath string, audioType AudioType) (*mp3Audio, error) {
 		loop:       false,
 		sampleRate: int32(d.SampleRate()),
 		channels:   2,
+		volume:     volume,
 	}
 
 	mp3.id = registerAudio(mp3)
@@ -831,6 +973,7 @@ func (o *mp3Audio) Play() bool {
 	o.isPlaying = true
 	o.dataPos = 0
 	sdl.ClearAudioStream(o.stream)
+	sdl.SetAudioStreamGain(o.stream, o.volume)
 	sdl.ResumeAudioStreamDevice(o.stream)
 
 	return true
@@ -913,4 +1056,35 @@ func (o *mp3Audio) GetAudioType() AudioType {
 	defer o.Unlock()
 
 	return o.audioType
+}
+
+// 设置音量
+func (o *mp3Audio) SetVolume(volume float32) {
+	if volume < 0.0 {
+		volume = 0.0
+	} else if volume > 1.0 {
+		volume = 1.0
+	}
+
+	o.Lock()
+	defer o.Unlock()
+
+	o.volume = volume
+	sdl.SetAudioStreamGain(o.stream, volume)
+}
+
+// 获取当前音量
+func (o *mp3Audio) GetVolume() float32 {
+	o.Lock()
+	defer o.Unlock()
+
+	return o.volume
+}
+
+// 是否正在播放
+func (o *mp3Audio) IsPlaying() bool {
+	o.Lock()
+	defer o.Unlock()
+
+	return o.isPlaying
 }

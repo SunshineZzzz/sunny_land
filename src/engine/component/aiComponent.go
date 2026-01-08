@@ -25,6 +25,7 @@ type AIComponent struct {
 	physicsComponent   *PhysicsComponent
 	spriteComponent    *SpriteComponent
 	animationComponent *AnimationComponent
+	audioComponent     *AudioComponent
 }
 
 // 确保AIComponent实现了IComponent接口
@@ -68,6 +69,11 @@ func (ac *AIComponent) Init() {
 	if ac.animationComponent == nil {
 		slog.Warn("animation component is nil", slog.String("owner", ac.Owner.GetName()))
 		return
+	}
+
+	// 音频组件不一定存在
+	if ac.Owner.GetComponent(def.ComponentTypeAudio) != nil {
+		ac.audioComponent = ac.Owner.GetComponent(def.ComponentTypeAudio).(*AudioComponent)
 	}
 }
 

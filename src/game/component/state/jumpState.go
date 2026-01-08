@@ -1,7 +1,9 @@
 package state
 
 import (
+	eComponent "sunny_land/src/engine/component"
 	"sunny_land/src/engine/physics"
+	"sunny_land/src/engine/utils/def"
 
 	"github.com/go-gl/mathgl/mgl32"
 )
@@ -31,6 +33,12 @@ func (js *JumpState) Enter() {
 	physicsCom := js.playerCom.GetPhysicsComponent()
 	// 向上跳跃
 	physicsCom.Velocity[1] = -js.playerCom.GetJumpSpeed()
+
+	audioComponent := js.playerCom.GetOwner().GetComponent(def.ComponentTypeAudio).(*eComponent.AudioComponent)
+	if audioComponent != nil {
+		// 播放跳跃音效
+		audioComponent.PlaySound("jump", false)
+	}
 }
 
 // 更新状态
