@@ -44,6 +44,8 @@ type GameApp struct {
 	physicsEngine *physics.PhysicsEngine
 	// 音频播放器
 	audioPlayer *audio.AudioPlayer
+	// 文本渲染器
+	textRenderer *render.TextRenderer
 }
 
 // 创建游戏应用
@@ -68,6 +70,12 @@ func (g *GameApp) Destroy() {
 		g.resourceManager = nil
 	}
 
+	// 清理文本渲染器
+	if g.textRenderer != nil {
+		g.textRenderer.Close()
+		g.textRenderer = nil
+	}
+
 	// 清理SDL资源
 	if g.sdlRenderer != nil {
 		sdl.DestroyRenderer(g.sdlRenderer)
@@ -87,8 +95,8 @@ func (g *GameApp) init() bool {
 	if !g.initConfig() || !g.initSDL() || !g.initTimer() ||
 		!g.initResourceManager() || !g.initAudioPlayer() ||
 		!g.initRenderer() || !g.initCamera() || !g.initInputManager() ||
-		!g.initPhysicsEngine() || !g.initContext() ||
-		!g.initSceneManager() {
+		!g.initTextRenderer() || !g.initPhysicsEngine() ||
+		!g.initContext() || !g.initSceneManager() {
 		return false
 	}
 
@@ -196,7 +204,8 @@ func (g *GameApp) initInputManager() bool {
 
 // 初始化上下文对象
 func (g *GameApp) initContext() bool {
-	g.context = econtext.NewContext(g.inputManager, g.renderer, g.resourceManager, g.camera, g.physicsEngine, g.audioPlayer)
+	g.context = econtext.NewContext(g.inputManager, g.renderer, g.resourceManager,
+		g.camera, g.physicsEngine, g.audioPlayer, g.textRenderer)
 	slog.Debug("context init success")
 	return true
 }
@@ -219,6 +228,13 @@ func (g *GameApp) initPhysicsEngine() bool {
 func (g *GameApp) initAudioPlayer() bool {
 	g.audioPlayer = audio.NewAudioPlayer(g.resourceManager)
 	slog.Debug("audio player init success")
+	return true
+}
+
+// 初始化文本渲染器
+func (g *GameApp) initTextRenderer() bool {
+	g.textRenderer = render.NewTextRenderer(g.sdlRenderer, g.resourceManager)
+	slog.Debug("text renderer init success")
 	return true
 }
 

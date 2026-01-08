@@ -25,6 +25,8 @@ type Context struct {
 	PhysicsEngine *physics.PhysicsEngine
 	// 音频播放器
 	AudioPlayer *audio.AudioPlayer
+	// 文本渲染器
+	TextRenderer *render.TextRenderer
 }
 
 // 确保实现IContext接口
@@ -33,7 +35,8 @@ var _ physics.IContext = (*Context)(nil)
 // 创建上下文对象
 func NewContext(inputManager *input.InputManager, renderer *render.Renderer,
 	resourceManager *resource.ResourceManager, camera *render.Camera,
-	physicsEngine *physics.PhysicsEngine, audioPlayer *audio.AudioPlayer) *Context {
+	physicsEngine *physics.PhysicsEngine, audioPlayer *audio.AudioPlayer,
+	textRenderer *render.TextRenderer) *Context {
 	slog.Debug("create context")
 	return &Context{
 		InputManager:    inputManager,
@@ -42,6 +45,7 @@ func NewContext(inputManager *input.InputManager, renderer *render.Renderer,
 		Camera:          camera,
 		PhysicsEngine:   physicsEngine,
 		AudioPlayer:     audioPlayer,
+		TextRenderer:    textRenderer,
 	}
 }
 
@@ -68,4 +72,9 @@ func (c *Context) GetPhysicsEngine() physics.PhysicsEngine {
 // 获取音频播放器
 func (c *Context) GetAudioPlayer() *audio.AudioPlayer {
 	return c.AudioPlayer
+}
+
+// 获取文本渲染器
+func (c *Context) GetTextRenderer() *render.TextRenderer {
+	return c.TextRenderer
 }

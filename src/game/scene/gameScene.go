@@ -201,12 +201,13 @@ func (gs *GameScene) Update(dt float64) {
 // 渲染
 func (gs *GameScene) Render() {
 	gs.Scene.Render()
+	// 测试文本渲染
+	gs.testTextRenderer()
 }
 
 // 处理事件
 func (gs *GameScene) HandleInput() {
 	gs.Scene.HandleInput()
-	gs.testSaveAndLoad()
 }
 
 // 清理
@@ -396,6 +397,7 @@ func (gs *GameScene) createEffect(centerPos mgl32.Vec2, tag string) {
 	gs.SafeAddGameObject(effectObj)
 }
 
+// 测试保存和加载
 func (gs *GameScene) testSaveAndLoad() {
 	inputManager := gs.GetContext().GetInputManager()
 	if inputManager.IsActionPressed("attack") {
@@ -406,4 +408,12 @@ func (gs *GameScene) testSaveAndLoad() {
 		slog.Info("current health", slog.Int("health", gs.sessionData.GetCurrentHealth()))
 		slog.Info("current score", slog.Int("score", gs.sessionData.GetCurrentScore()))
 	}
+}
+
+// 测试文本渲染
+func (gs *GameScene) testTextRenderer() {
+	gs.GetContext().GetTextRenderer().DrawUIText("Hello, World!", "assets/fonts/VonwaonBitmap-16px.ttf", 32,
+		mgl32.Vec2{100.0, 100.0}, sdl.FColor{R: 1.0, G: 0.0, B: 0.0, A: 1.0})
+	gs.GetContext().GetTextRenderer().DrawText(gs.GetContext().GetCamera().(*render.Camera), "Map Text", "assets/fonts/VonwaonBitmap-16px.ttf", 32,
+		mgl32.Vec2{200.0, 200.0}, sdl.FColor{R: 1.0, G: 1.0, B: 1.0, A: 1.0})
 }
