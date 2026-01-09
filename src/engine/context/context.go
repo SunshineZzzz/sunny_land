@@ -8,7 +8,32 @@ import (
 	"sunny_land/src/engine/physics"
 	"sunny_land/src/engine/render"
 	"sunny_land/src/engine/resource"
+
+	"github.com/go-gl/mathgl/mgl32"
 )
+
+type GameStateType int
+
+const (
+	// 标题界面
+	GameStateTitle GameStateType = iota
+	// 游戏进行中
+	GameStatePlaying
+	// 游戏暂停
+	GameStatePaused
+	// 游戏结束
+	GameStateGameOver
+)
+
+// 游戏状态抽象
+type IGameState interface {
+	// 判断是否在游戏进行中
+	IsPlaying() bool
+	// 设置当前游戏状态
+	SetState(GameStateType)
+	// 获取逻辑分辨率
+	GetLogicalSize() mgl32.Vec2
+}
 
 // 持有对核心引擎模块引用的上下文对象，用于简化依赖注入，
 // 传递Context对象即可获取引擎的各个模块。
@@ -27,6 +52,8 @@ type Context struct {
 	AudioPlayer *audio.AudioPlayer
 	// 文本渲染器
 	TextRenderer *render.TextRenderer
+	// 游戏状态
+	GameState IGameState
 }
 
 // 确保实现IContext接口
@@ -36,7 +63,7 @@ var _ physics.IContext = (*Context)(nil)
 func NewContext(inputManager *input.InputManager, renderer *render.Renderer,
 	resourceManager *resource.ResourceManager, camera *render.Camera,
 	physicsEngine *physics.PhysicsEngine, audioPlayer *audio.AudioPlayer,
-	textRenderer *render.TextRenderer) *Context {
+	textRenderer *render.TextRenderer, gameState IGameState) *Context {
 	slog.Debug("create context")
 	return &Context{
 		InputManager:    inputManager,
@@ -46,6 +73,7 @@ func NewContext(inputManager *input.InputManager, renderer *render.Renderer,
 		PhysicsEngine:   physicsEngine,
 		AudioPlayer:     audioPlayer,
 		TextRenderer:    textRenderer,
+		GameState:       gameState,
 	}
 }
 
@@ -82,4 +110,9 @@ func (c *Context) GetTextRenderer() *render.TextRenderer {
 // 获取资源管理器
 func (c *Context) GetResourceManager() *resource.ResourceManager {
 	return c.ResourceManager
+}
+
+// 获取游戏状态
+func (c *Context) GetGameState() IGameState {
+	return c.GameState
 }

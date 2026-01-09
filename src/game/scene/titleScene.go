@@ -68,7 +68,8 @@ func (ts *TitleScene) Init() {
 
 // 创建UI元素
 func (ts *TitleScene) createUI() {
-	screenSize := mgl32.Vec2{640.0, 360.0}
+	ts.GetContext().GetGameState().SetState(econtext.GameStateTitle)
+	screenSize := ts.GetContext().GetGameState().GetLogicalSize()
 
 	if !ts.UIManager.Init(screenSize) {
 		slog.Error("ui manager init failed")

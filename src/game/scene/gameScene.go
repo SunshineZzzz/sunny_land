@@ -62,6 +62,9 @@ func (gs *GameScene) Init() {
 		return
 	}
 
+	// 游戏状态设置为正在进行中
+	gs.GetContext().GetGameState().SetState(econtext.GameStatePlaying)
+
 	// 初始化玩家
 	if !gs.InitPlayer() {
 		slog.Error("player init failed")
@@ -209,7 +212,7 @@ func (gs *GameScene) InitEnemiesAndItem() bool {
 
 // 初始化UI
 func (gs *GameScene) InitUI() bool {
-	if !gs.UIManager.Init(mgl32.Vec2{640.0, 360.0}) {
+	if !gs.UIManager.Init(gs.GetContext().GetGameState().GetLogicalSize()) {
 		return false
 	}
 
@@ -236,6 +239,10 @@ func (gs *GameScene) Render() {
 // 处理事件
 func (gs *GameScene) HandleInput() {
 	gs.Scene.HandleInput()
+	// 检查暂停动作
+	if gs.GetContext().GetInputManager().IsActionPressed("pause") {
+		gs.SceneManager.RequestPushScene(NewMenuScene(gs.GetContext(), gs.SceneManager, gs.sessionData))
+	}
 }
 
 // 清理

@@ -46,6 +46,8 @@ type GameApp struct {
 	audioPlayer *audio.AudioPlayer
 	// 文本渲染器
 	textRenderer *render.TextRenderer
+	// 游戏状态器
+	gameState *GameState
 }
 
 // 创建游戏应用
@@ -95,7 +97,7 @@ func (g *GameApp) init() bool {
 	if !g.initConfig() || !g.initSDL() || !g.initTimer() ||
 		!g.initResourceManager() || !g.initAudioPlayer() ||
 		!g.initRenderer() || !g.initCamera() || !g.initInputManager() ||
-		!g.initTextRenderer() || !g.initPhysicsEngine() ||
+		!g.initTextRenderer() || !g.initPhysicsEngine() || !g.initGameState() ||
 		!g.initContext() || !g.initSceneManager() {
 		return false
 	}
@@ -208,7 +210,7 @@ func (g *GameApp) initInputManager() bool {
 // 初始化上下文对象
 func (g *GameApp) initContext() bool {
 	g.context = econtext.NewContext(g.inputManager, g.renderer, g.resourceManager,
-		g.camera, g.physicsEngine, g.audioPlayer, g.textRenderer)
+		g.camera, g.physicsEngine, g.audioPlayer, g.textRenderer, g.gameState)
 	slog.Debug("context init success")
 	return true
 }
@@ -238,6 +240,13 @@ func (g *GameApp) initAudioPlayer() bool {
 func (g *GameApp) initTextRenderer() bool {
 	g.textRenderer = render.NewTextRenderer(g.sdlRenderer, g.resourceManager)
 	slog.Debug("text renderer init success")
+	return true
+}
+
+// 初始化游戏状态器
+func (g *GameApp) initGameState() bool {
+	g.gameState = NewGameState(g.sdlWindow, g.sdlRenderer, econtext.GameStateTitle)
+	slog.Debug("game state init success")
 	return true
 }
 

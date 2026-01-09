@@ -32,24 +32,29 @@ func NewHelpsScene(context *econtext.Context, sceneManager *escene.SceneManager)
 }
 
 // 初始化游戏场景
-func (ts *HelpsScene) Init() {
-	ts.Scene.Init()
+func (hs *HelpsScene) Init() {
+	hs.Scene.Init()
 
-	screenSize := mgl32.Vec2{640.0, 360.0}
+	screenSize := hs.GetContext().GetGameState().GetLogicalSize()
+	if !hs.UIManager.Init(screenSize) {
+		slog.Error("ui manager init failed")
+		return
+	}
+
 	// 创建帮助图片 UIImage （让它覆盖整个屏幕）
 	helpImage := ui.NewUIImage("assets/textures/UI/instructions.png", mgl32.Vec2{0.0, 0.0}, screenSize, nil, false)
-	ts.UIManager.AddElement(helpImage)
+	hs.UIManager.AddElement(helpImage)
 }
 
 // 处理输入事件
-func (ts *HelpsScene) HandleInput() {
-	if !ts.IsInitialized() {
+func (hs *HelpsScene) HandleInput() {
+	if !hs.IsInitialized() {
 		return
 	}
 
 	// 检测是否按下鼠标左键
-	if ts.GetContext().GetInputManager().IsActionPressed("MouseLeftClick") {
+	if hs.GetContext().GetInputManager().IsActionPressed("MouseLeftClick") {
 		// 鼠标左键被按下, 退出
-		ts.SceneManager.RequestPopScene()
+		hs.SceneManager.RequestPopScene()
 	}
 }

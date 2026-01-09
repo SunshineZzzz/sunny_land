@@ -88,10 +88,13 @@ func (s *Scene) Update(dt float64) {
 		return
 	}
 
-	// 先更新物理引擎
-	s.ctx.PhysicsEngine.Update(dt)
-	// 更新相机
-	s.ctx.Camera.Update(dt)
+	// 只有游戏进行中，才需要更新物理引擎和相机
+	if s.ctx.GameState.IsPlaying() {
+		// 先更新物理引擎
+		s.ctx.PhysicsEngine.Update(dt)
+		// 更新相机
+		s.ctx.Camera.Update(dt)
+	}
 
 	// 更新所有游戏对象，并删除需要移除的对象
 	for e := s.GameObjects.Front(); e != nil; {
