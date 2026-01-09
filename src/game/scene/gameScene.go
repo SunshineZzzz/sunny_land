@@ -64,6 +64,8 @@ func (gs *GameScene) Init() {
 
 	// 游戏状态设置为正在进行中
 	gs.GetContext().GetGameState().SetState(econtext.GameStatePlaying)
+	// 更新最高分
+	gs.sessionData.SyncHighScore("assets/save.json")
 
 	// 初始化玩家
 	if !gs.InitPlayer() {
@@ -157,6 +159,11 @@ func (gs *GameScene) InitPlayer() bool {
 		return false
 	}
 
+	// 从SessionData中更新玩家生命值
+	healthCom := gs.playerObject.GetComponent(def.ComponentTypeHealth).(*component.HealthComponent)
+	healthCom.SetMaxHealth(gs.sessionData.GetMaxHealth())
+	healthCom.SetCurHealth(gs.sessionData.GetCurHealth())
+
 	// 相机目标跟踪玩家
 	transformComp := gs.playerObject.GetComponent(def.ComponentTypeTransform).(*component.TransformComponent)
 	if transformComp == nil {
@@ -229,6 +236,16 @@ func (gs *GameScene) Update(dt float64) {
 	gs.handleObjectCollisions()
 	// 处理瓦片触发事件
 	gs.handleTileTriggers()
+
+	// 玩家掉出地图下方则判断为失败
+	if gs.playerObject != nil {
+		pos := gs.playerObject.GetComponent(def.ComponentTypeTransform).(*component.TransformComponent).GetPosition()
+		worldRect := gs.GetContext().PhysicsEngine.GetWorldBounds()
+		// 多100像素冗余量
+		if worldRect != nil && pos.Y() > worldRect.Position.Y()+worldRect.Size.Y()+100.0 {
+			gs.showEndScene(false)
+		}
+	}
 }
 
 // 渲染
@@ -321,7 +338,20 @@ func (gs *GameScene) handleObjectCollisions() {
 		} else if obj1.GetTag() == "next_level" && obj2.GetName() == "player" {
 			gs.toNextLevel(obj1)
 		}
+		// 处理玩家与结束触发器碰撞
+		if obj1.GetName() == "player" && obj2.GetName() == "win" {
+			gs.showEndScene(true)
+		} else if obj2.GetName() == "player" && obj1.GetName() == "win" {
+			gs.showEndScene(true)
+		}
 	}
+}
+
+// 显示结束场景
+func (gs *GameScene) showEndScene(isWin bool) {
+	gs.sessionData.SetIsWin(isWin)
+	endScene := NewEndScene(gs.GetContext(), gs.SceneManager, gs.sessionData)
+	gs.SceneManager.RequestPushScene(endScene)
 }
 
 // 进入下一个关卡
@@ -442,7 +472,7 @@ func (gs *GameScene) testSaveAndLoad() {
 	}
 	if inputManager.IsActionPressed("pause") {
 		gs.sessionData.LoadFromFile("assets/save.json")
-		slog.Info("current health", slog.Int("health", gs.sessionData.GetCurrentHealth()))
+		slog.Info("current health", slog.Int("health", gs.sessionData.GetCurHealth()))
 		slog.Info("current score", slog.Int("score", gs.sessionData.GetCurrentScore()))
 	}
 }
@@ -470,7 +500,7 @@ func (gs *GameScene) createScoreUI() {
 // 创建生命值UI (或最大生命值改变时重设)
 func (gs *GameScene) createHealthPanel() {
 	maxHealth := gs.sessionData.GetMaxHealth()
-	curHealth := gs.sessionData.GetCurrentHealth()
+	curHealth := gs.sessionData.GetCurHealth()
 	stratX := float32(10.0)
 	startY := float32(10.0)
 	iconWidth := float32(20.0)
@@ -491,10 +521,12 @@ func (gs *GameScene) createHealthPanel() {
 		gs.healthPanel.AddChild(bgIcon)
 	}
 	// 创建前景图标
-	for i := 0; i < curHealth; i++ {
+	for i := 0; i < maxHealth; i++ {
 		iconPos := mgl32.Vec2{stratX + float32(i)*(iconWidth+spacing), startY}
 		iconSize := mgl32.Vec2{iconWidth, iconHeight}
 		fgIcon := ui.NewUIImage(fullHeartTex, iconPos, iconSize, nil, false)
+		// 前景图标的可见性取决于当前生命值
+		fgIcon.SetVisible(i < curHealth)
 		gs.healthPanel.AddChild(fgIcon)
 	}
 	// 添加到根UI面板

@@ -24,6 +24,8 @@ type SessionData struct {
 	currentScore int
 	// 最高得分
 	highScore int
+	// 是否胜利
+	isWin bool
 
 	// 进入关卡时的生命值，读/存档用
 	levelHealth int
@@ -47,7 +49,7 @@ func NewSessionData() *SessionData {
 }
 
 // 获取当前生命值
-func (sd *SessionData) GetCurrentHealth() int {
+func (sd *SessionData) GetCurHealth() int {
 	return sd.currentHealth
 }
 
@@ -203,9 +205,58 @@ func (sd *SessionData) LoadFromFile(filename string) bool {
 	sd.currentScore = j.Get("level_score").MustInt(0)
 	sd.currentHealth = j.Get("level_health").MustInt(3)
 	sd.maxHealth = j.Get("max_health").MustInt(3)
-	sd.highScore = j.Get("high_score").MustInt(0)
+	// 文件中的最高分，与当前最高分取最大值
+	sd.highScore = max(sd.highScore, j.Get("high_score").MustInt(0))
 	sd.mapPath = j.Get("map_path").MustString("assets/maps/level1.tmj")
 
 	slog.Info("session data load from file", slog.String("filename", filename))
+	return true
+}
+
+// 设置是否胜利
+func (sd *SessionData) SetIsWin(isWin bool) {
+	sd.isWin = isWin
+}
+
+// 获取是否胜利
+func (sd *SessionData) GetIsWin() bool {
+	return sd.isWin
+}
+
+// 同步最高分(文件与当前分数取最大值)
+func (sd *SessionData) SyncHighScore(fileName string) bool {
+	jsonBytes, err := os.ReadFile(fileName)
+	if err != nil {
+		slog.Warn("read file error", slog.String("filename", fileName))
+		// 文件找不到无法同步
+		return false
+	}
+
+	// 从文件解析JSON数据
+	j, err := simplejson.NewJson(jsonBytes)
+	if err != nil {
+		slog.Error("decode json error", slog.String("filename", fileName))
+		return false
+	}
+
+	// 同步最高分
+	highScoreInFile := j.Get("high_score").MustInt(0)
+	// 根据文件中的最高分和当前最高分来决定处理方式
+	if highScoreInFile < sd.highScore {
+		// 文件中的最高分 低于 当前最高分
+		j.Set("high_score", sd.highScore)
+		jsonBytes, err = j.EncodePretty()
+		if err != nil {
+			slog.Error("encode json error", slog.String("filename", fileName))
+			return false
+		}
+		os.WriteFile(fileName, jsonBytes, 0644)
+		slog.Info("session data sync high score to file", slog.String("filename", fileName))
+	} else {
+		sd.highScore = highScoreInFile
+		// 文件中的最高分 不低于 当前最高分
+		slog.Info("session data high score not lower than current score", slog.String("filename", fileName))
+	}
+
 	return true
 }
