@@ -149,17 +149,17 @@ func (r *Renderer) DrawSpriteWithParallax(camera physics.ICamera, sprite physics
 }
 
 // 绘制用户界面精灵图
-func (r *Renderer) DrawUISprite(sprite *Sprite, position mgl32.Vec2, size *mgl32.Vec2) {
-	texture := r.resourceManager.GetTexture(sprite.textureId)
+func (r *Renderer) DrawUISprite(sprite physics.ISprite, position mgl32.Vec2, size *mgl32.Vec2) {
+	texture := r.resourceManager.GetTexture(sprite.GetTextureId())
 	if texture == nil {
-		slog.Error("texture is nil", slog.String("textureID", sprite.textureId))
+		slog.Error("texture is nil", slog.String("textureID", sprite.GetTextureId()))
 		return
 	}
 
 	// 获取精灵图源矩形
 	srcRect := r.GetSpriteSrcRect(sprite)
 	if srcRect == nil {
-		slog.Error("sourceRect is nil", slog.String("textureID", sprite.textureId))
+		slog.Error("sourceRect is nil", slog.String("textureID", sprite.GetTextureId()))
 		return
 	}
 
@@ -176,12 +176,12 @@ func (r *Renderer) DrawUISprite(sprite *Sprite, position mgl32.Vec2, size *mgl32
 	}
 
 	flipMode := sdl.FlipNone
-	if sprite.isFlipped {
+	if sprite.GetIsFlipped() {
 		flipMode = sdl.FlipHorizontal
 	}
 	// 执行绘制
 	if !sdl.RenderTextureRotated(r.sdlRenderer, texture, srcRect, &dstRect, 0.0, nil, flipMode) {
-		slog.Error("render ui texture failed", slog.String("textureID", sprite.textureId), slog.Any("srcRect", srcRect),
+		slog.Error("render ui texture failed", slog.String("textureID", sprite.GetTextureId()), slog.Any("srcRect", srcRect),
 			slog.Any("destRect", dstRect))
 		return
 	}

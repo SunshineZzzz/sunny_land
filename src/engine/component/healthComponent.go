@@ -77,12 +77,14 @@ func (hc *HealthComponent) IsAlive() bool {
 	return hc.curHealth > 0
 }
 
-// 治疗
-func (hc *HealthComponent) Heal(amount int) {
+// 治疗GameObject，增加当前生命值(不超过最大生命值)，返回治疗后生命值
+func (hc *HealthComponent) Heal(amount int) int {
 	if amount <= 0 || !hc.IsAlive() {
-		return
+		// 不治疗或已经死亡
+		return hc.curHealth
 	}
 	hc.curHealth = min(hc.maxHealth, hc.curHealth+amount)
+	return hc.curHealth
 }
 
 // 设置无敌状态

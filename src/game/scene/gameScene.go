@@ -2,6 +2,7 @@ package scene
 
 import (
 	"log/slog"
+	"strconv"
 
 	"sunny_land/src/engine/component"
 	econtext "sunny_land/src/engine/context"
@@ -29,6 +30,10 @@ type GameScene struct {
 	playerObject *object.GameObject
 	// 场景共享数据
 	sessionData *data.SessionData
+	// 得分标签
+	scoreLabel *ui.UILabel
+	// 生命值面板
+	healthPanel *ui.UIPanel
 }
 
 // 创建游戏场景
@@ -203,8 +208,8 @@ func (gs *GameScene) InitUI() bool {
 		return false
 	}
 
-	// 创建一个透明的方形UIPanel
-	gs.UIManager.AddElement(ui.NewUIPanel(mgl32.Vec2{100.0, 100.0}, mgl32.Vec2{200.0, 200.0}, &emath.FColor{R: 0.5, G: 0.0, B: 0.0, A: 0.3}))
+	gs.createScoreUI()
+	gs.createHealthPanel()
 
 	return true
 }
@@ -268,9 +273,8 @@ func (gs *GameScene) handlePlayerDamage(damage int) {
 		slog.Info("player dead", slog.String("name", gs.playerObject.GetName()))
 		// TODO: 可能的死亡逻辑处理
 	}
-	// 更新游戏数据(生命值)
-	healthCom := gs.playerObject.GetComponent(def.ComponentTypeHealth).(*component.HealthComponent)
-	gs.sessionData.SetCurrentHealth(healthCom.GetCurHealth())
+	// 更新生命值及HealthUI
+	gs.updateHealthWithUI()
 }
 
 // 处理游戏对象间的碰撞逻辑，从PhysicsEngine获取信息
@@ -295,9 +299,9 @@ func (gs *GameScene) handleObjectCollisions() {
 		}
 		// 处理玩家与"hazard"对象的碰撞
 		if obj1.GetTag() == "player" && obj2.GetTag() == "hazard" {
-			obj1.GetComponent(def.ComponentTypePlayer).(*gcomponent.PlayerComponent).TakeDamage(1)
+			gs.handlePlayerDamage(1)
 		} else if obj1.GetTag() == "hazard" && obj2.GetTag() == "player" {
-			obj2.GetComponent(def.ComponentTypePlayer).(*gcomponent.PlayerComponent).TakeDamage(1)
+			gs.handlePlayerDamage(1)
 		}
 		// 处理玩家与关底触发器碰撞
 		if obj1.GetName() == "player" && obj2.GetTag() == "next_level" {
@@ -349,6 +353,8 @@ func (gs *GameScene) playerVSEnemyCollision(player, enemy *object.GameObject) {
 		player.GetComponent(def.ComponentTypePhysics).(*component.PhysicsComponent).Velocity[1] = -300.0
 		// 播放音效，此音效完全可以放在玩家的音频组件中，这里示例另一种用法：直接用AudioPlayer播放，传入文件路径
 		gs.GetContext().GetAudioPlayer().PlaySound("assets/audio/punch2a.mp3")
+		// 加分
+		gs.addScoreWithUI(10)
 	} else {
 		// 踩踏失败，玩家受伤
 		slog.Info("player failed to stomp on enemy", slog.String("playerName", player.GetName()), slog.String("enemyName", enemy.GetName()))
@@ -359,12 +365,14 @@ func (gs *GameScene) playerVSEnemyCollision(player, enemy *object.GameObject) {
 
 // 玩家与道具碰撞处理
 func (gs *GameScene) playerVSItemCollision(player, item *object.GameObject) {
+	_ = player
+
 	if item.GetName() == "fruit" {
 		// 加血
-		player.GetComponent(def.ComponentTypeHealth).(*component.HealthComponent).Heal(1)
+		gs.healWithUI(1)
 	} else if item.GetName() == "gem" {
 		// 加分
-		gs.sessionData.AddScore(5)
+		gs.addScoreWithUI(5)
 	}
 	// 标记道具为待删除状态
 	item.SetNeedRemove(true)
@@ -431,7 +439,92 @@ func (gs *GameScene) testSaveAndLoad() {
 // 测试文本渲染
 func (gs *GameScene) testTextRenderer() {
 	gs.GetContext().GetTextRenderer().DrawUIText("Hello, World!", "assets/fonts/VonwaonBitmap-16px.ttf", 32,
-		mgl32.Vec2{100.0, 100.0}, sdl.FColor{R: 1.0, G: 0.0, B: 0.0, A: 1.0})
+		mgl32.Vec2{100.0, 100.0}, emath.FColor{R: 1.0, G: 0.0, B: 0.0, A: 1.0})
 	gs.GetContext().GetTextRenderer().DrawText(gs.GetContext().GetCamera().(*render.Camera), "Map Text", "assets/fonts/VonwaonBitmap-16px.ttf", 32,
-		mgl32.Vec2{200.0, 200.0}, sdl.FColor{R: 1.0, G: 1.0, B: 1.0, A: 1.0})
+		mgl32.Vec2{200.0, 200.0}, emath.FColor{R: 1.0, G: 1.0, B: 1.0, A: 1.0})
+}
+
+// 创建得分UI
+func (gs *GameScene) createScoreUI() {
+	// 创建得分标签
+	scoreText := "Score: " + strconv.Itoa(gs.sessionData.GetCurrentScore())
+	gs.scoreLabel = ui.NewUILabel(gs.GetContext().TextRenderer, scoreText, "assets/fonts/VonwaonBitmap-16px.ttf", 16,
+		emath.FColor{R: 1.0, G: 1.0, B: 1.0, A: 1.0}, mgl32.Vec2{0.0, 0.0})
+	// 获取根UI面板尺寸
+	screenSize := gs.UIManager.GetRootElement().GetSize()
+	gs.scoreLabel.SetPosition(mgl32.Vec2{screenSize.X() - 100.0, 10.0})
+	gs.UIManager.AddElement(gs.scoreLabel)
+}
+
+// 创建生命值UI (或最大生命值改变时重设)
+func (gs *GameScene) createHealthPanel() {
+	maxHealth := gs.sessionData.GetMaxHealth()
+	curHealth := gs.sessionData.GetCurrentHealth()
+	stratX := float32(10.0)
+	startY := float32(10.0)
+	iconWidth := float32(20.0)
+	iconHeight := float32(18.0)
+	spacing := float32(5.0)
+	fullHeartTex := "assets/textures/UI/Heart.png"
+	emptyHeartTex := "assets/textures/UI/Heart-bg.png"
+
+	// 创建一个默认的UIPanel (不需要背景色，因此大小无所谓，只用于定位)
+	gs.healthPanel = ui.NewUIPanel(mgl32.Vec2{0.0, 0.0}, mgl32.Vec2{0.0, 0.0}, &emath.FColor{R: 0.0, G: 0.0, B: 0.0, A: 1.0})
+
+	// 根据最大生命值，循环创建生命值图标(添加到UIPanel中)
+	// 创建背景图标
+	for i := 0; i < maxHealth; i++ {
+		iconPos := mgl32.Vec2{stratX + float32(i)*(iconWidth+spacing), startY}
+		iconSize := mgl32.Vec2{iconWidth, iconHeight}
+		bgIcon := ui.NewUIImage(emptyHeartTex, iconPos, iconSize, nil, false)
+		gs.healthPanel.AddChild(bgIcon)
+	}
+	// 创建前景图标
+	for i := 0; i < curHealth; i++ {
+		iconPos := mgl32.Vec2{stratX + float32(i)*(iconWidth+spacing), startY}
+		iconSize := mgl32.Vec2{iconWidth, iconHeight}
+		fgIcon := ui.NewUIImage(fullHeartTex, iconPos, iconSize, nil, false)
+		gs.healthPanel.AddChild(fgIcon)
+	}
+	// 添加到根UI面板
+	gs.UIManager.AddElement(gs.healthPanel)
+}
+
+// 增加得分，同时更新UI
+func (gs *GameScene) addScoreWithUI(score int) {
+	gs.sessionData.AddScore(score)
+	gs.scoreLabel.SetText("Score: " + strconv.Itoa(gs.sessionData.GetCurrentScore()))
+	slog.Info("add score", slog.Int("score", score))
+}
+
+// 增加生命，同时更新UI
+func (gs *GameScene) healWithUI(health int) {
+	gs.playerObject.GetComponent(def.ComponentTypeHealth).(*component.HealthComponent).Heal(health)
+	// 更新生命值与UI
+	gs.updateHealthWithUI()
+}
+
+// 更新生命值UI(只适用最大生命值不变的情况)
+func (gs *GameScene) updateHealthWithUI() {
+	if gs.playerObject == nil || gs.healthPanel == nil {
+		slog.Error(" playerObject or healthPanel is nil")
+		return
+	}
+
+	// 获取当前生命值并更新游戏数据
+	curHealth := gs.playerObject.GetComponent(def.ComponentTypeHealth).(*component.HealthComponent).GetCurHealth()
+	gs.sessionData.SetCurrentHealth(curHealth)
+	maxHealth := gs.sessionData.GetMaxHealth()
+
+	// 前景图标是后添加的，因此设置后半段的可见性即可
+	for i := maxHealth; i < maxHealth*2; i++ {
+		childs := gs.healthPanel.GetChildren()
+		j := 0
+		for child := childs.Front(); child != nil; child = child.Next() {
+			if j == i {
+				child.Value.(*ui.UIImage).SetVisible(i-maxHealth < curHealth)
+			}
+			j++
+		}
+	}
 }

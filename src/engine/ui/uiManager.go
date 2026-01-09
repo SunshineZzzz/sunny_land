@@ -33,7 +33,7 @@ func (um *UIManager) Init(windowSize mgl32.Vec2) bool {
 	return true
 }
 
-// 添加一个UI元素到根节点的child_容器中
+// 添加一个UI元素到根节点的child容器中
 func (um *UIManager) AddElement(element IUIElement) {
 	um.rootElement.AddChild(element)
 }

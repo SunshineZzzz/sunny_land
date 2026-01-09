@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"sunny_land/src/engine/resource"
+	emath "sunny_land/src/engine/utils/math"
 
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
 	"github.com/SunshineZzzz/purego-sdl3/ttf"
@@ -60,7 +61,7 @@ func (tr *TextRenderer) Close() {
 * @param color 文本颜色。(默认为白色)
  */
 func (tr *TextRenderer) DrawUIText(text string, fontId string, fontSize int,
-	position mgl32.Vec2, color sdl.FColor) {
+	position mgl32.Vec2, color emath.FColor) {
 	// 从资源管理器获取字体
 	font := tr.resourceManager.GetFont(fontId, fontSize)
 	if font == nil {
@@ -102,7 +103,7 @@ func (tr *TextRenderer) DrawUIText(text string, fontId string, fontSize int,
  * @param color 文本颜色。
  */
 func (tr *TextRenderer) DrawText(camera *Camera, text string, fontId string, fontSize int,
-	position mgl32.Vec2, color sdl.FColor) {
+	position mgl32.Vec2, color emath.FColor) {
 	// 应用相机变换
 	screenPosition := camera.WorldToScreen(position)
 	// 绘制字符串

@@ -20,6 +20,8 @@ type IRenderer interface {
 	DrawSprite(ICamera, ISprite, mgl32.Vec2, mgl32.Vec2, float64)
 	// 绘制填充矩形
 	DrawUIFilledRect(emath.Rect, emath.FColor)
+	// 绘制用户界面精灵图
+	DrawUISprite(ISprite, mgl32.Vec2, *mgl32.Vec2)
 }
 
 // 摄像机抽象
