@@ -36,6 +36,9 @@ type GameScene struct {
 	healthPanel *ui.UIPanel
 }
 
+// 确保GameScene实现IScene接口
+var _ escene.IScene = (*GameScene)(nil)
+
 // 创建游戏场景
 func NewGameScene(ctx *econtext.Context, sceneManager *escene.SceneManager, sd *data.SessionData) *GameScene {
 	gs := &GameScene{}
@@ -120,6 +123,8 @@ func (gs *GameScene) InitLevel() bool {
 	worldSize := mainLayer.GetComponent(def.ComponentTypeTileLayer).(*component.TileLayerComponent).GetWorldSize()
 	// 设置相机限制范围
 	gs.GetContext().Camera.SetLimitBounds(&emath.Rect{Position: mgl32.Vec2{0.0, 0.0}, Size: worldSize})
+	// 开始时重置相机位置，以免切换场景时晃动
+	gs.GetContext().Camera.SetPosition(mgl32.Vec2{0.0, 0.0})
 
 	// 设置世界边界
 	gs.GetContext().PhysicsEngine.SetWorldBounds(&emath.Rect{Position: mgl32.Vec2{0.0, 0.0}, Size: worldSize})
@@ -210,7 +215,6 @@ func (gs *GameScene) InitUI() bool {
 
 	gs.createScoreUI()
 	gs.createHealthPanel()
-	gs.createTestButton()
 
 	return true
 }
@@ -529,20 +533,4 @@ func (gs *GameScene) updateHealthWithUI() {
 		}
 	NEXT:
 	}
-}
-
-// 创建测试按钮
-func (gs *GameScene) createTestButton() {
-	testButton := ui.NewUIButton(gs.GetContext(),
-		"assets/textures/UI/buttons/Start1.png",
-		"assets/textures/UI/buttons/Start2.png",
-		"assets/textures/UI/buttons/Start3.png",
-		mgl32.Vec2{100.0, 100.0}, mgl32.Vec2{0.0, 0.0},
-		func() { gs.testButtonClicked() })
-	gs.UIManager.AddElement(testButton)
-}
-
-// 测试按钮点击事件
-func (gs *GameScene) testButtonClicked() {
-	slog.Info("test button clicked")
 }

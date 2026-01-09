@@ -34,6 +34,8 @@ type ICamera interface {
 	GetViewportSize() mgl32.Vec2
 	// 世界坐标转换为屏幕坐标(视口坐标)
 	WorldToScreen(mgl32.Vec2) mgl32.Vec2
+	// 移动相机
+	Move(mgl32.Vec2)
 }
 
 // 精灵图抽象
@@ -75,7 +77,7 @@ type IContext interface {
 	// 获取摄像机
 	GetCamera() ICamera
 	// 获取输入管理器
-	GetInputManager() input.InputManager
+	GetInputManager() *input.InputManager
 }
 
 // 游戏对象抽象

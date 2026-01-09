@@ -60,3 +60,8 @@ func (i *UIImage) Render(ctx *econtext.Context) {
 	// 渲染子元素，调用基类方法
 	i.UIElement.Render(ctx)
 }
+
+// 获取纹理ID
+func (i *UIImage) GetTextureId() string {
+	return i.sprite.GetTextureId()
+}

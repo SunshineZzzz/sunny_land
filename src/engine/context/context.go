@@ -60,8 +60,8 @@ func (c *Context) GetCamera() physics.ICamera {
 }
 
 // 获取输入管理器
-func (c *Context) GetInputManager() input.InputManager {
-	return *c.InputManager
+func (c *Context) GetInputManager() *input.InputManager {
+	return c.InputManager
 }
 
 // 获取物理引擎
