@@ -228,7 +228,13 @@ func (r *Renderer) GetSpriteSrcRect(sprite physics.ISprite) *sdl.FRect {
 	}
 
 	// 否则获取纹理尺寸并返回整个纹理大小
-	return r.resourceManager.GetTextureSize(sprite.GetTextureId())
+	texSize := r.resourceManager.GetTextureSize(sprite.GetTextureId())
+	return &sdl.FRect{
+		X: 0.0,
+		Y: 0.0,
+		W: texSize.X(),
+		H: texSize.Y(),
+	}
 }
 
 // 是否在视口内

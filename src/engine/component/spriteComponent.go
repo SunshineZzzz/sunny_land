@@ -109,7 +109,7 @@ func (sc *SpriteComponent) updateSpriteSize() {
 		sc.spriteSize = mgl32.Vec2{sc.sprite.GetSourceRect().W, sc.sprite.GetSourceRect().H}
 	} else {
 		textureSize := sc.resourceManager.GetTextureSize(sc.sprite.GetTextureId())
-		sc.spriteSize = mgl32.Vec2{textureSize.W, textureSize.H}
+		sc.spriteSize = mgl32.Vec2{textureSize.X(), textureSize.Y()}
 	}
 }
 

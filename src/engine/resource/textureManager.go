@@ -5,6 +5,7 @@ import (
 
 	"github.com/SunshineZzzz/purego-sdl3/img"
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
+	"github.com/go-gl/mathgl/mgl32"
 )
 
 // 纹理管理器
@@ -81,14 +82,14 @@ func (tm *textureManager) UnloadTexture(path string) {
 }
 
 // 获取纹理大小
-func (tm *textureManager) GetTextureSize(path string) *sdl.FRect {
+func (tm *textureManager) GetTextureSize(path string) mgl32.Vec2 {
 	texture := tm.GetTexture(path)
 	if texture == nil {
 		slog.Error("texture not found", slog.String("path", path))
-		return nil
+		return mgl32.Vec2{}
 	}
 
 	var w, h float32
 	sdl.GetTextureSize(texture, &w, &h)
-	return &sdl.FRect{X: 0.0, Y: 0.0, W: w, H: h}
+	return mgl32.Vec2{w, h}
 }

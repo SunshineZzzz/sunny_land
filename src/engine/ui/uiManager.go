@@ -2,7 +2,8 @@ package ui
 
 import (
 	"log/slog"
-	"sunny_land/src/engine/context"
+	econtext "sunny_land/src/engine/context"
+	"sunny_land/src/engine/ui/state"
 
 	"github.com/go-gl/mathgl/mgl32"
 )
@@ -34,7 +35,7 @@ func (um *UIManager) Init(windowSize mgl32.Vec2) bool {
 }
 
 // 添加一个UI元素到根节点的child容器中
-func (um *UIManager) AddElement(element IUIElement) {
+func (um *UIManager) AddElement(element state.IUIElement) {
 	um.rootElement.AddChild(element)
 }
 
@@ -49,7 +50,7 @@ func (um *UIManager) ClearElements() {
 }
 
 // 处理输入事件，如果事件被处理则返回true。
-func (um *UIManager) HandleInput(ctx *context.Context) bool {
+func (um *UIManager) HandleInput(ctx *econtext.Context) bool {
 	if !um.rootElement.IsVisible() {
 		return false
 	}
@@ -58,7 +59,7 @@ func (um *UIManager) HandleInput(ctx *context.Context) bool {
 }
 
 // 更新
-func (um *UIManager) Update(dt float64, context *context.Context) {
+func (um *UIManager) Update(dt float64, context *econtext.Context) {
 	if !um.rootElement.IsVisible() {
 		return
 	}
@@ -67,7 +68,7 @@ func (um *UIManager) Update(dt float64, context *context.Context) {
 }
 
 // 渲染
-func (um *UIManager) Render(context *context.Context) {
+func (um *UIManager) Render(context *econtext.Context) {
 	if !um.rootElement.IsVisible() {
 		return
 	}

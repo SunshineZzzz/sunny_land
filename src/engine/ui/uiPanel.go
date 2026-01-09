@@ -1,7 +1,8 @@
 package ui
 
 import (
-	"sunny_land/src/engine/context"
+	econtext "sunny_land/src/engine/context"
+	"sunny_land/src/engine/ui/state"
 	emath "sunny_land/src/engine/utils/math"
 
 	"github.com/go-gl/mathgl/mgl32"
@@ -21,7 +22,7 @@ type UIPanel struct {
 }
 
 // 确保UIPanel实现IUIElement接口
-var _ IUIElement = (*UIPanel)(nil)
+var _ state.IUIElement = (*UIPanel)(nil)
 
 // 创建UIPanel实例
 func NewUIPanel(position mgl32.Vec2, size mgl32.Vec2, backgroundColor *emath.FColor) *UIPanel {
@@ -43,7 +44,7 @@ func (p *UIPanel) GetBackgroundColor() *emath.FColor {
 }
 
 // 渲染
-func (p *UIPanel) Render(ctx *context.Context) {
+func (p *UIPanel) Render(ctx *econtext.Context) {
 	if !p.visible {
 		return
 	}

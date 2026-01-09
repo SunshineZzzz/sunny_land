@@ -3,31 +3,12 @@ package ui
 import (
 	"container/list"
 
-	"sunny_land/src/engine/context"
+	econtext "sunny_land/src/engine/context"
+	"sunny_land/src/engine/ui/state"
 	emath "sunny_land/src/engine/utils/math"
 
 	"github.com/go-gl/mathgl/mgl32"
 )
-
-// UI元素抽象
-type IUIElement interface {
-	// 处理输入事件
-	HandleInput(*context.Context) bool
-	// 更新状态
-	Update(float64, *context.Context)
-	// 渲染
-	Render(*context.Context)
-	// 是否需要移除
-	IsNeedRemove() bool
-	// 设置父元素
-	SetParent(parent IUIElement)
-	// 获取父元素
-	GetParent() IUIElement
-	// 添加子元素
-	AddChild(child IUIElement)
-	// 获取(计算)元素在屏幕上位置, 相对于屏幕左上角
-	GetScreenPosition() mgl32.Vec2
-}
 
 // UI元素基础实现
 type UIElement struct {
@@ -40,13 +21,13 @@ type UIElement struct {
 	// 是否需要移除
 	needRemove bool
 	// 指向父节点的非拥有指针
-	parent IUIElement
+	parent state.IUIElement
 	// 子元素列表
 	children list.List
 }
 
 // 确保UIElement实现了IUIElement接口
-var _ IUIElement = (*UIElement)(nil)
+var _ state.IUIElement = (*UIElement)(nil)
 
 // 构建UI元素
 func BuildUIElement(e *UIElement, position mgl32.Vec2, size mgl32.Vec2) {
@@ -59,7 +40,7 @@ func BuildUIElement(e *UIElement, position mgl32.Vec2, size mgl32.Vec2) {
 }
 
 // 处理输入事件
-func (e *UIElement) HandleInput(ctx *context.Context) bool {
+func (e *UIElement) HandleInput(ctx *econtext.Context) bool {
 	if !e.visible {
 		return false
 	}
@@ -68,7 +49,7 @@ func (e *UIElement) HandleInput(ctx *context.Context) bool {
 	for child := e.children.Front(); child != nil; {
 		next := child.Next()
 
-		uiElement := child.Value.(IUIElement)
+		uiElement := child.Value.(state.IUIElement)
 		if !uiElement.IsNeedRemove() {
 			if uiElement.HandleInput(ctx) {
 				return true
@@ -83,7 +64,7 @@ func (e *UIElement) HandleInput(ctx *context.Context) bool {
 }
 
 // 更新状态
-func (e *UIElement) Update(dt float64, ctx *context.Context) {
+func (e *UIElement) Update(dt float64, ctx *econtext.Context) {
 	if !e.visible {
 		return
 	}
@@ -92,7 +73,7 @@ func (e *UIElement) Update(dt float64, ctx *context.Context) {
 	for child := e.children.Front(); child != nil; {
 		next := child.Next()
 
-		uiElement := child.Value.(IUIElement)
+		uiElement := child.Value.(state.IUIElement)
 		if !uiElement.IsNeedRemove() {
 			uiElement.Update(dt, ctx)
 		} else {
@@ -104,14 +85,14 @@ func (e *UIElement) Update(dt float64, ctx *context.Context) {
 }
 
 // 渲染
-func (e *UIElement) Render(ctx *context.Context) {
+func (e *UIElement) Render(ctx *econtext.Context) {
 	if !e.visible {
 		return
 	}
 
 	// 渲染子元素
 	for child := e.children.Front(); child != nil; child = child.Next() {
-		uiElement := child.Value.(IUIElement)
+		uiElement := child.Value.(state.IUIElement)
 		uiElement.Render(ctx)
 	}
 }
@@ -122,7 +103,7 @@ func (e *UIElement) IsNeedRemove() bool {
 }
 
 // 添加子元素
-func (e *UIElement) AddChild(child IUIElement) {
+func (e *UIElement) AddChild(child state.IUIElement) {
 	if child == nil {
 		return
 	}
@@ -131,17 +112,17 @@ func (e *UIElement) AddChild(child IUIElement) {
 }
 
 // 设置父元素
-func (e *UIElement) SetParent(parent IUIElement) {
+func (e *UIElement) SetParent(parent state.IUIElement) {
 	e.parent = parent
 }
 
 // 将指定子元素从列表中移除，并返回其指针
-func (e *UIElement) RemoveChild(child IUIElement) IUIElement {
+func (e *UIElement) RemoveChild(child state.IUIElement) state.IUIElement {
 	if child == nil {
 		return nil
 	}
 	for element := e.children.Front(); element != nil; element = element.Next() {
-		if element.Value.(IUIElement) == child {
+		if element.Value.(state.IUIElement) == child {
 			e.children.Remove(element)
 			// 清除父指针
 			child.SetParent(nil)
@@ -157,7 +138,7 @@ func (e *UIElement) RemoveChild(child IUIElement) IUIElement {
 func (e *UIElement) RemoveAllChildren() {
 	for child := e.children.Front(); child != nil; child = child.Next() {
 		// 清除父指针
-		child.Value.(IUIElement).SetParent(nil)
+		child.Value.(state.IUIElement).SetParent(nil)
 	}
 	e.children.Init()
 }
@@ -178,7 +159,7 @@ func (e *UIElement) IsVisible() bool {
 }
 
 // 获取父元素
-func (e *UIElement) GetParent() IUIElement {
+func (e *UIElement) GetParent() state.IUIElement {
 	return e.parent
 }
 
@@ -219,4 +200,13 @@ func (e *UIElement) GetBounds() emath.Rect {
 		Position: e.GetScreenPosition(),
 		Size:     e.size,
 	}
+}
+
+// 检查给定点是否在元素的边界内
+func (e *UIElement) IsPointInside(point mgl32.Vec2) bool {
+	bounds := e.GetBounds()
+	return point.X() >= bounds.Position.X() &&
+		point.X() <= bounds.Position.X()+bounds.Size.X() &&
+		point.Y() >= bounds.Position.Y() &&
+		point.Y() <= bounds.Position.Y()+bounds.Size.Y()
 }

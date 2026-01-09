@@ -1,7 +1,7 @@
 package ui
 
 import (
-	"sunny_land/src/engine/context"
+	econtext "sunny_land/src/engine/context"
 	"sunny_land/src/engine/render"
 	emath "sunny_land/src/engine/utils/math"
 
@@ -97,7 +97,7 @@ func (ui *UILabel) SetTextColor(textColor emath.FColor) {
 }
 
 // 渲染标签
-func (ui *UILabel) Render(ctx *context.Context) {
+func (ui *UILabel) Render(ctx *econtext.Context) {
 	if !ui.visible || ui.text == "" {
 		return
 	}

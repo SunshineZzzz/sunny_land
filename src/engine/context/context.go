@@ -78,3 +78,8 @@ func (c *Context) GetAudioPlayer() *audio.AudioPlayer {
 func (c *Context) GetTextRenderer() *render.TextRenderer {
 	return c.TextRenderer
 }
+
+// 获取资源管理器
+func (c *Context) GetResourceManager() *resource.ResourceManager {
+	return c.ResourceManager
+}

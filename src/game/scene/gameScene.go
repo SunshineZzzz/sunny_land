@@ -210,6 +210,7 @@ func (gs *GameScene) InitUI() bool {
 
 	gs.createScoreUI()
 	gs.createHealthPanel()
+	gs.createTestButton()
 
 	return true
 }
@@ -358,7 +359,6 @@ func (gs *GameScene) playerVSEnemyCollision(player, enemy *object.GameObject) {
 	} else {
 		// 踩踏失败，玩家受伤
 		slog.Info("player failed to stomp on enemy", slog.String("playerName", player.GetName()), slog.String("enemyName", enemy.GetName()))
-		player.GetComponent(def.ComponentTypePlayer).(*gcomponent.PlayerComponent).TakeDamage(1)
 		gs.handlePlayerDamage(1)
 	}
 }
@@ -523,8 +523,26 @@ func (gs *GameScene) updateHealthWithUI() {
 		for child := childs.Front(); child != nil; child = child.Next() {
 			if j == i {
 				child.Value.(*ui.UIImage).SetVisible(i-maxHealth < curHealth)
+				goto NEXT
 			}
 			j++
 		}
+	NEXT:
 	}
+}
+
+// 创建测试按钮
+func (gs *GameScene) createTestButton() {
+	testButton := ui.NewUIButton(gs.GetContext(),
+		"assets/textures/UI/buttons/Start1.png",
+		"assets/textures/UI/buttons/Start2.png",
+		"assets/textures/UI/buttons/Start3.png",
+		mgl32.Vec2{100.0, 100.0}, mgl32.Vec2{0.0, 0.0},
+		func() { gs.testButtonClicked() })
+	gs.UIManager.AddElement(testButton)
+}
+
+// 测试按钮点击事件
+func (gs *GameScene) testButtonClicked() {
+	slog.Info("test button clicked")
 }

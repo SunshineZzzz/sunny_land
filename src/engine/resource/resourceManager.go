@@ -5,6 +5,7 @@ import (
 
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
 	"github.com/SunshineZzzz/purego-sdl3/ttf"
+	"github.com/go-gl/mathgl/mgl32"
 )
 
 // 资源管理器
@@ -87,7 +88,7 @@ func (rm *ResourceManager) UnloadMusic(path string) {
 }
 
 // 获取纹理大小
-func (rm *ResourceManager) GetTextureSize(path string) *sdl.FRect {
+func (rm *ResourceManager) GetTextureSize(path string) mgl32.Vec2 {
 	return rm.textureManager.GetTextureSize(path)
 }
 

@@ -1,8 +1,9 @@
 package ui
 
 import (
-	"sunny_land/src/engine/context"
+	econtext "sunny_land/src/engine/context"
 	"sunny_land/src/engine/render"
+	"sunny_land/src/engine/ui/state"
 
 	"github.com/SunshineZzzz/purego-sdl3/sdl"
 	"github.com/go-gl/mathgl/mgl32"
@@ -21,7 +22,7 @@ type UIImage struct {
 }
 
 // 确保UIImage实现IUIElement接口
-var _ IUIElement = (*UIImage)(nil)
+var _ state.IUIElement = (*UIImage)(nil)
 
 /**
  * @brief 构造一个UIImage对象。
@@ -41,7 +42,7 @@ func NewUIImage(textureId string, position mgl32.Vec2, size mgl32.Vec2, sourceRe
 }
 
 // 渲染
-func (i *UIImage) Render(ctx *context.Context) {
+func (i *UIImage) Render(ctx *econtext.Context) {
 	if !i.visible || i.sprite == nil || i.sprite.GetTextureId() == "" {
 		// 如果不可见或没有分配纹理则不渲染
 		return
